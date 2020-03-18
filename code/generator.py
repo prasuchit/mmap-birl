@@ -3,7 +3,7 @@ import options
 import solver
 import math
 import utils
-import scipy.io as sio
+# import scipy.io as sio
 import gridworld
 np.seterr(divide='ignore', invalid='ignore')
 
@@ -92,8 +92,8 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed=None):
 
     for m in range(nTrajs):
         # sample initial state
-        sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start, (mdp.nStates))) # This will pick the probability value of one random sample from all the available start states
-        s = np.squeeze(np.where(sample == 1))
+        sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start, (mdp.nStates))) # This will sample once from all the available start states
+        s = np.squeeze(np.where(sample == 1))   # Samples from start could be one at some states as we update it iteratively
         v = 0
         for h in range(nSteps):
             a = np.squeeze(piL[s])

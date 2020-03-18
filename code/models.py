@@ -1,4 +1,5 @@
 class mdp:
+    # Just defines the various attributes of an mdp
     def __init__(self):
         self.name = None
         self.nStates = None

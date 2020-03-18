@@ -1,6 +1,6 @@
 import numpy as np
 import math
-import scipy.io as sio
+# import scipy.io as sio
 import options
 import numpy.matlib
 np.seterr(divide='ignore', invalid='ignore')
@@ -11,7 +11,11 @@ class trajNode:
         self.a = a
         self.pair = str(s) + ' ' + str(a)
         self.parent = parent
-
+#################################################################################
+# The init and str here are not being used currently.                           #
+# My guess is they are needed to print out the nodes of the graph               #
+# after analysis of the bayesian network using the computations.                #
+#################################################################################
     def __str__(self):
         s = ''
         s += 'sa: ' + str(self.s) + ', ' + str(self.a) + '\n'
