@@ -8,7 +8,7 @@ import gridworld
 np.seterr(divide='ignore', invalid='ignore')
 
 
-def generateProblem(problem, discount=0.9):
+def generateMDP(problem, discount=0.9):
     if problem.name == 'gridworld':
         mdp = gridworld.init(problem.gridSize, problem.blockSize, problem.noise, problem.discount)
     
@@ -18,7 +18,7 @@ def generateProblem(problem, discount=0.9):
     mdp.T = mdp.transition.copy()
     mdp.T = np.reshape(mdp.T, (nS, nS * nA), order='F') # Flattening the s',s,a matrix to get a 2D matrix of size nS*(nS*nA)
     mdp.T = mdp.discount * np.transpose(mdp.T)  # Discounted transition probabilities
-    mdp.E = I - mdp.T   # Get a clear understanding of what this is!!
+    mdp.E = I - mdp.T   # Eq 5 from Algo for IRL: Vpi = (I - gamma*T)^-1 * R
     return mdp
 
 def generateDemonstration(mdp, problem, numOccs=0):
@@ -40,29 +40,35 @@ def generateDemonstration(mdp, problem, numOccs=0):
     if numOccs > 0:
         np.random.seed(problem.seed)
         dist = np.ones(problem.nSteps) / problem.nSteps # Each value in the dist matrix will be probab of (1/nSteps)
-        occlusions = np.random.multinomial(n = numOccs, pvals = dist)   # Pick n samples for the n occluded observations from the prob distribution of nsteps
+        
+        # Next line is part of the original code, but not needed because the same thing is done inside the for loop again
+
+        # occlusions = np.random.multinomial(n = numOccs, pvals = dist)   
+        
+        ###########################################################################################
+        # Pick n samples for the n occluded observations from the prob distribution of nsteps
         # Essentially what this is doing is out of the number of trials (given by numOccs here),
         # it is assigning one of the observations to be occluded in each trial and returns a list
         # with the count of the number of times each observation was assigned as occluded in the 
         # n trials we ran.
 
         # eg: Throw a dice 20 times:
-            # np.random.multinomial(20, [1/6.]*6, size=1)
+        #   np.random.multinomial(20, [1/6.]*6, size=1)
         # returns array([[4, 1, 7, 5, 2, 1]])
         # It landed 4 times on 1, once on 2, etc.
+        ###########################################################################################
 
         for i in range(problem.nTrajs):
             occlusions = np.random.multinomial(n=numOccs, pvals = dist) # Pick n samples for the n occluded observations from the prob distribution of nsteps
             # So here, in each iteration of the loop, one observation is assigned as occluded with equal prob.
             for j in range(problem.nSteps):
                 if occlusions[j] == 1:
-                    trajs[i, j, 0] = -1     # What is the 3rd argument
-                    trajs[i, j, 1] = -1     # what does 0 or 1 in this case?? 
+                    trajs[i, j, 0] = -1     # The 3rd index holds the s-a pair
+                    trajs[i, j, 1] = -1     # 0 - state; 1 - action
                 # The value for that traj and that step is assigned -1
     data.trajSet = trajs
 
     return data
-
 
 def generateTrajectory(mdp, problem):
     print('Generate Demonstrations')
@@ -71,14 +77,14 @@ def generateTrajectory(mdp, problem):
         w = utils.sampleWeight(problem.name, nF, problem.seed)  # Creates a zeros matrix of the size of feature vector.
         print('  - sample a new weight')
         mdp = utils.convertW2R(w, mdp)  # The mdp returned here has a reward vector 
-                                        # that is a weighted linear combination of features
+                                        # that is a weighted linear combination of feature values
         print('  - assign weight to the problem')
         print(w)
     policy, value, _, _ = solver.policyIteration(mdp)
     score = np.matmul(np.transpose(mdp.start), value)
-    print(' - policy interation: %.4f' % (score))
+    print(' - Sum of state values for this policy: %.4f' % (score))
     trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
-    print(' - sample %d trajs: %.4f(%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
+    print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
     # print('============ Done =============')
 
     return trajs, policy
@@ -92,8 +98,8 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed=None):
 
     for m in range(nTrajs):
         # sample initial state
-        sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start, (mdp.nStates))) # This will sample once from all the available start states
-        s = np.squeeze(np.where(sample == 1))   # Samples from start could be one at some states as we update it iteratively
+        sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start, (mdp.nStates))) # This will sample once from all the available start states, pick one at random and assign it a value of 1
+        s = np.squeeze(np.where(sample == 1))   # We get back one state value as 1 and we choose that as the start state here
         v = 0
         for h in range(nSteps):
             a = np.squeeze(piL[s])
@@ -105,7 +111,7 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed=None):
             s = np.squeeze(np.where(sample == 1))
 
         vList[m] = v
-
+    # Expert's policy value
     Vmean = np.mean(vList)  # Returning the mean and variance of all the value of all the states
     Vvar = np.var(vList)
 

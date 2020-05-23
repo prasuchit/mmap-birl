@@ -33,19 +33,21 @@ def sampleWeight(name, nF, seed=None):
     return w
 
 def convertW2R(weight, mdp):    # Converting weights into rewards
-    mdp.weight = weight # This is a zero matrix of the size of feature vector
+    print("Updating mdp weights...")
+    mdp.weight = weight # This is adjusted as we move through the statespace
     reward = np.matmul(mdp.F, weight)   # IRL algorithm originally considers the 
                                         # reward as a weighted linear combination of features
     reward = np.reshape(reward, (mdp.nStates, mdp.nActions), 'F')   # Making reward a 144*4 matrix
     mdp.reward = reward
     return mdp
 
-def QfromV(V, mdp):
+def QfromV(V, mdp): 
     nS = mdp.nStates
     nA = mdp.nActions
     Q = np.zeros((nS, nA))
-    for a in range(nA):
+    for a in range(nA): # Eq 1 Sec 2.1 Choi kim paper
         expected = np.matmul(np.transpose(mdp.transition[:, :, a]), V)
+        # Section 2.2, Theorem 1, eq 2 Algorithms for IRL
         Q[:, a] = mdp.reward[:, a] + mdp.discount * np.squeeze(expected)
 
     return Q
@@ -65,36 +67,41 @@ def getTrajInfo(trajs, mdp):
     trajInfo.nTrajs = trajs.shape[0]
     trajInfo.nSteps = trajs.shape[1]
     cnt = np.zeros((nS, nA))
-    occ = np.zeros((nS, nA))
+    occupancy = np.zeros((nS, nA))
     nSteps = 0
-    occlus = []
+    occlusions = []
 
     for m in range(trajInfo.nTrajs):
         for h in range(trajInfo.nSteps):
             s = trajs[m, h, 0]
             a = trajs[m, h, 1]
             if s == -1 and a == -1:
-                occlus.append([m, h])
-            cnt[s, a] += 1  # Emperical occupancy matrix
-            occ[s, a] += math.pow(mdp.discount, h)  # discounted state occupancy (visitation frequency)
+                occlusions.append([m, h])
+            cnt[s, a] += 1  # Empirical occupancy matrix
+            occupancy[s, a] += math.pow(mdp.discount, h)  # discounted state occupancy (visitation frequency)
             nSteps += 1
     # Check Choi-Kim MAP paper page 3 starting to find this eq for mu and v
 
-    occ = occ / trajInfo.nTrajs # Dividing it by nTrajs to get occupancy for each trajectory taken
+    occupancy = occupancy / trajInfo.nTrajs # This is alpha from eq 1 of your choi-kim writeup
+    # Above line is part of eq 6 in your notes of choi-kim's paper
     nSnA = nS*nA    # 144*4
     reward_reshaped = mdp.reward.reshape((nSnA, 1))    # Reshaping reward matrix from 144*4 to 576*1 linear vector
     reward_reshaped_transposed = np.transpose(reward_reshaped)  # 1*576 reward vector
-    occupancy_reshaped = occ.reshape((nSnA, 1))  # Reshaping occupancy matrix from 144*4 to 576*1 linear vector
+    occupancy_reshaped = occupancy.reshape((nSnA, 1))  # Reshaping occupancy matrix from 144*4 to 576*1 linear vector
     # Check section 5.1.4 page 22 starting of Survey of IRL to see how to calculate V(s)
     # trajInfo.v = np.matmul(reward_reshaped_transposed, occupancy_reshaped).squeeze()  # 1*576 * 576*1 = 1*1   # State specific cumulative reward values V(s)
     trajInfo.v = np.matmul(reward_reshaped_transposed, occupancy_reshaped)  # 1*576 * 576*1 = 1*1   # State specific cumulative reward values V(s)
+    # The above eq is eq 6 in your choi-kim notes
     # empirical_occupancy = np.sum(cnt).reshape((nS, 1)) # Original code
-    empirical_occupancy = cnt.sum(axis=1).reshape((nS, 1))
+    empirical_occupancy = cnt.sum(axis=1).reshape((nS, 1))  # This is irrespective of the action and only wrt state,
+    # By summing axis=1 (across columns for each row) values, we add the freq values for all actions in a state
+    # Whereas without adding that the freq corresponds to an action in that state
+    # Check eq 8 and 9 in you choi-kim paper notes 
     empirical_occupancy_distributed = np.matlib.repmat(empirical_occupancy, 1, nA)  # Denominator on RHS of pi(s,a) from the paper
     trajInfo.pi = np.nan_to_num(cnt / empirical_occupancy_distributed)   # Policy
     # trajInfo.mu = (np.sum(cnt) / nSteps).reshape((nS, 1)) # Original code
-    trajInfo.mu = (cnt.sum(axis=1) / nSteps).reshape((nS, 1)) # Mu(pi) is Emperical state visitation freq for policy pi
-    trajInfo.occ = occ
+    trajInfo.mu = (cnt.sum(axis=1) / nSteps).reshape((nS, 1)) # Mu(s) is Emperical state visitation freq for that state s
+    trajInfo.occupancy = occupancy
     feature_transpose = np.transpose(mdp.F)
     feature_reshaped = (feature_transpose).reshape((nS,nS))
     # if(((mdp.F).reshape(nS,nS) == (np.transpose(mdp.F)).reshape((nS,nS))).all()):
@@ -102,7 +109,7 @@ def getTrajInfo(trajs, mdp):
     # else:
     #     print("You were wrong!")
     trajInfo.featExp = np.matmul(feature_reshaped,trajInfo.mu)   # mdp.F is calculated in gridworld.py
-    trajInfo.occlusions = np.array(occlus)
+    trajInfo.occlusions = np.array(occlusions)
 
     N = np.count_nonzero(cnt)
     trajInfo.cnt = np.zeros((N, 3)).astype(int)
@@ -113,17 +120,20 @@ def getTrajInfo(trajs, mdp):
                 trajInfo.cnt[i, 0] = s
                 trajInfo.cnt[i, 1] = a
                 trajInfo.cnt[i, 2] = cnt[s, a]
-                i = i + 1
+                i += 1
     return trajInfo
 
 
-def sampleNewWeight(dims, opts, seed=None):
-    lb = opts.lb    # lower bound
-    ub = opts.ub    # upper bound
-    if opts.priorType == 'Gaussian':
-        mean = np.ones(dims) * opts.mu
-        cov = np.eye(dims) * opts.sigma
+def sampleNewWeight(dims, options, seed=None):
+    lb = options.lb    # lower bound
+    ub = options.ub    # upper bound
+    # dims - dimensions; Depends on number of features.
+    if options.priorType == 'Gaussian':
+        mean = np.ones(dims) * options.mu
+        cov = np.eye(dims) * options.sigma
         w0 = np.clip(np.random.multivariate_normal(mean, cov), a_min=lb, a_max=ub).reshape((dims, 1))
+        # Sampling a random value using the mean and covariance from a normal distribution
     else:
         w0 = np.random.uniform(low=lb, high=ub, size=(dims))
+        # Sampling a random value from a uniform distribution b/w lb and ub
     return w0

@@ -3,10 +3,10 @@ import math
 import numpy as np
 import sys
 
-np.set_printoptions(threshold=sys.maxsize)
+# np.set_printoptions(threshold=sys.maxsize)
 np.seterr(divide='ignore', invalid='ignore')
 
-def init(gridSize=12, blockSize=2, noise=0.3, discount=0.9):
+def init(gridSize=12, blockSize=2, noise=0.3, discount=0.99):
     mdp = models.mdp()
     mdp.name = ''
 
@@ -19,16 +19,14 @@ def init(gridSize=12, blockSize=2, noise=0.3, discount=0.9):
         for x in range(gridSize):
             s = loc2s(x, y, gridSize)   # Assigning a state number to each x,y pair using loc2s
             ns = np.zeros(nA).astype(int)
-            ns[0] = loc2s(x, y - 1, gridSize)   # Creating a list of possible states you
-            ns[1] = loc2s(x, y + 1, gridSize)   # could reach by performing the available
-            ns[2] = loc2s(x - 1, y, gridSize)   # list of actions in each state.
-            ns[3] = loc2s(x + 1, y, gridSize)
+            ns[0] = loc2s(x, y + 1, gridSize) # N  # Creating a list of possible states you
+            ns[1] = loc2s(x + 1, y, gridSize) # E  # could reach by performing the available
+            ns[2] = loc2s(x - 1, y, gridSize) # W  # list of actions in each state.
+            ns[3] = loc2s(x, y - 1, gridSize) # S
             for a in range(nA):
                 for a2 in range(nA):
-                    T[ns[a2], s, a] = T[ns[a2], s, a] + noise / nA; # Adding noise per action to each transition 
-#################################################################################################################
-                T[ns[a], s, a] = T[ns[a], s, a] + 1 - noise;    # IDK what is happening here!
-#################################################################################################################
+                    T[ns[a2], s, a] = T[ns[a2], s, a] + (noise / nA); # Adding noise per action to each transition 
+                T[ns[a], s, a] = T[ns[a], s, a] + (1 - noise);    # Rest of the prob given to the intended action
 
 
     # assign state feature

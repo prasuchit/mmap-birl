@@ -4,86 +4,131 @@ import solver
 import math
 import copy
 from tqdm import tqdm
+from scipy.special._logsumexp import logsumexp
 np.seterr(divide='ignore', invalid='ignore')
 np.warnings.filterwarnings('ignore')
 
-def calNegMarginLogPost(w, trajs, mdp, opts):
 
+def calcNegMarginalLogPost(w, trajs, mdp, options):
+# Calculate Negative Marginalized Log Posterior
+# Check page 6 line 5 choi-kim paper for concept
     originalInfo = utils.getTrajInfo(trajs, mdp)
     occs = originalInfo.occlusions
 
     llh = 0
     grad1 = 0
     trajsCopy = copy.copy(trajs)
+    if(-1 in trajsCopy):
+        print("Compute posterior with marginalization...")
+        for s in tqdm(range(mdp.nStates)):
+            for a in range(mdp.nActions):
+                # occs is a 2D array containing [m,h] pairs
+                # where  m = trajectory count; h = step count;
+                # So for instance occs[0,0] = m and occs[0,1] = h
+                trajsCopy[occs[0,0], occs[0,1], 0] = s
+                trajsCopy[occs[0,0], occs[0,1], 1] = a
 
-    print("Compute posterior with marginalization...")
-    for s in tqdm(range(mdp.nStates)):
-        for a in range(mdp.nActions):
-            trajsCopy[occs[0,0], occs[0,1], 0] = s
-            trajsCopy[occs[0,0], occs[0,1], 1] = a
-            trajInfo = utils.getTrajInfo(trajsCopy, mdp)
-            mllh, mgrad1 = calLogLLH(w, trajInfo, mdp, opts)
-            llh += mllh
-            grad1 += mgrad1
-    grad1 = (grad1).reshape(36,1)
-    prior, grad2 = calLogPrior(w, opts)  
+                # What we are doing above is for the trajectory index and step index where we found the occlusion
+                # we are creating nS,nA number of new trajectories to marginalize them by considering that occluded 
+                # location to be each state and that every action is performed in that state. For every such new 
+                # trajectory copy created, we get its info from utils function and find the marginal log likelihood 
+                # and marginal gradient. We find the summation of all of them to marginalize andd finally obtain the 
+                # posterior and the corresponding gradient for it.
+
+                trajInfo = utils.getTrajInfo(trajsCopy, mdp)    # For each occluded obsv in a trajectory get info
+                # print(f"State {s}, action {a}")
+                mllh, mgrad1 = calcLogLLH(trajInfo, mdp, options)    # Getting back the log likelihood and gradient
+                                                                        # for the mth trajectory.
+                # print(f"mllh: {mllh}, mgrad1: {mgrad1}")
+                llh += mllh # Adding all the individual trajectory likelihood values
+                grad1 += mgrad1
+    else:
+        print("No occlusions found...")
+        trajInfo = utils.getTrajInfo(trajsCopy, mdp)    # For each occluded obsv in a trajectory get info
+        # print(f"State {s}, action {a}")
+        mllh, mgrad1 = calcLogLLH(trajInfo, mdp, options)    # Getting back the log likelihood and gradient
+                                                                # for the mth trajectory.
+        # print(f"mllh: {mllh}, mgrad1: {mgrad1}")
+        llh += mllh # Adding all the individual trajectory likelihood values
+        grad1 += mgrad1
+    grad1 = (grad1).reshape(mdp.nFeatures,1)
+    prior, grad2 = calcLogPrior(w, options)  
+    post = prior + llh
+    grad = grad1 + grad2
+
+    # print(f"posterior:\n {post},\nlog likelihood:\n {llh},\nprior:\n {prior},\ngradient:\n {grad},\ngrad1:\n {grad1},\ngrad2:\n {grad2}")
+    return post, grad
+
+def calcNegLogPost(w, trajInfo, mdp, options):
+# Calculate Negative Log Posterior    
+    llh, grad1 = calcLogLLH(trajInfo, mdp, options)
+    prior, grad2 = calcLogPrior(w, options)
     post = prior + llh
     grad = grad1 + grad2
 
     return post, grad
 
-def calNegLogPost(w, trajInfo, mdp, opts):
-    
-    llh, grad1 = calLogLLH(w, trajInfo, mdp, opts)
-    prior, grad2 = calLogPrior(w, opts)
-    post = prior + llh
-    grad = grad1 + grad2
+def calcLogPrior(w, options):
+# Calculate Log Prior
+# Useful link: 
+#   https://stats.stackexchange.com/questions/90134/gradient-of-multivariate-gaussian-log-likelihood
 
-    return post, grad
-
-def calLogPrior(w, opts):
-    if opts.priorType == 'Gaussian':
-        x = w - opts.mu;
-        prior = np.sum(np.matmul(np.transpose(x), x) * -1 / 2 * math.pow(opts.sigma, 2))
-        grad = -x / math.pow(opts.sigma, 2)
+    if options.priorType == 'Gaussian':
+        # The next few lines just calculate the gaussian distb equation; check Wikipedia
+        x = w - options.mu;
+        prior = np.sum(np.matmul(np.transpose(x), x) * -1 / 2 * math.pow(options.sigma, 2))
+        grad = -x / math.pow(options.sigma, 2)
     else:
         prior = math.log(1)
         grad = np.zeros(w.shape)
         
     return prior, grad
 
-def calLogLLH(w, trajInfo, mdp, opts):
-    piL, VL, QL, H = solver.policyIteration(mdp)
-    dQ = calGradQ(piL, mdp)
-
+def calcLogLLH(trajInfo, mdp, options):
+# Calculate Log Likelihood
+    piL, VL, QL, H = solver.policyIteration(mdp)    # QL is a 144*4 matrix with Q values in every state for all 4 actions
+    dQ = calcGradQ(piL, mdp)
     nF = mdp.nFeatures
     nS = mdp.nStates
     nA = mdp.nActions
-    eta = opts.eta
+    eta = options.eta
+    # print("Policy: ", piL)
+#########################################################################################
+    BQ = eta * QL   # eta is the inverse temp component of a boltzmann distrib
 
-    BQ = eta * QL
-    BQSum = np.log(np.sum(np.exp(BQ), axis=1))
+    # BQSum = np.log(np.sum(np.exp(BQ), axis=1))  # Also explained in Choi-Kim MAP paper sec 2.3
+    
+    BQSum = logsumexp(BQ, axis=1)
+    # The above two lines are based on BIRL paper by Ramachandran-Amir, section 3.1
+    # The gist of that is that by using the e^(Boltzmann Q value) we can find the likelihood
+    # of some action being done in some state. log(sum(e^BQ)) gives the log value of sum of
+    # all the action likelihood values or the log-likelihood of all the actions in a state
+
     NBQ = BQ.copy()
     for i in range(nA):
-        NBQ[:, i] = NBQ[:, i] - BQSum[:]
-
+        NBQ[:, i] = NBQ[:, i] - BQSum[:]    # log(map paper Choi-Kim, section 2.3 Eq 4)
+    
     llh = 0
     for i in range(len(trajInfo.cnt)):
         s = trajInfo.cnt[i, 0]
         a = trajInfo.cnt[i, 1]
         llh += NBQ[s, a]
 
-    pi_sto = np.exp(BQ)
-    pi_sto_sum = np.sum(pi_sto, axis=1)
-    for i in range(nA):
-        pi_sto[:, i] = pi_sto[:, i] / pi_sto_sum[:]
+    # ################### Eq 26 of shibo's writeup ##########################################
+    # pi_sto = np.exp(BQ)
+    # pi_sto_sum = np.sum(pi_sto, axis=1)
+    # for i in range(nA):
+    #     pi_sto[:, i] = pi_sto[:, i] / pi_sto_sum[:] # Eq 26 of shibo's writeup
+    # #######################################################################################
+
+    pi_sto = np.exp(NBQ)
 
     dlogPi = np.zeros((nF, nS * nA))
     for f in range(nF):
         z = np.reshape(dQ[f, :], (nS, nA))
         for i in range(nA):
-            z[:, i] = z[:, i] - np.sum(pi_sto * np.reshape(dQ[f, :], (nS, nA)), axis=1)[:]
-        dlogPi[f, :] = np.reshape(z, (1, nS * nA))
+            z[:, i] = z[:, i] - np.sum(pi_sto * np.reshape(dQ[f, :], (nS, nA)), axis=1)[:]  # Eq 25 of shibo's writeup
+        dlogPi[f, :] = np.reshape(z, (1, nS * nA))  # Eq 27 of shibo's writeup
 
     grad = np.zeros(nF)
     for i in range(len(trajInfo.cnt)):
@@ -91,17 +136,25 @@ def calLogLLH(w, trajInfo, mdp, opts):
         a = trajInfo.cnt[i, 1]
         j = a * nS;
         grad = grad + dlogPi[:, j]
-
+    # print("Grad in log llh: ", grad)    
     return llh, grad
+#################################################################################################
 
-def calGradQ(piL, mdp):
+def calcGradQ(piL, mdp):
+# Calculate Gradient Q value
     nS = mdp.nStates
     nA = mdp.nActions
     Epi = np.zeros((nS, nS * nA)).astype(int)
+    # temp = piL * nS
+    # temp10 = np.arange(0, nS).reshape((nS , 1))
+    # idxReshapeDim1 = piL * nS + np.arange(0, nS).reshape((nS , 1))
     idx = np.reshape(piL * nS + np.arange(0, nS).reshape((nS , 1)), nS)
     for i in range(nS):
         Epi[i, idx[i]] = 1
-
+    # temp1 = np.eye(nS * nA)
+    # temp2 = np.matmul(mdp.T, Epi)
+    # temp3 = temp1 - temp2   # I - (gamma*transition)*E(pi)
+    # temp4 = mdp.F
+    # temp5 = np.linalg.lstsq(temp3, temp4)
     dQ = np.linalg.lstsq(np.eye(nS * nA) - np.matmul(mdp.T, Epi), mdp.F)[0]
-
     return np.transpose(dQ)
