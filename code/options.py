@@ -17,6 +17,7 @@ class demonstrations:
         self.trajSet = None
         self.nTrajs = None
         self.nSteps = None
+        self.trueReward = None
 
 
 class trajInfo:

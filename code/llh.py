@@ -51,6 +51,7 @@ def calcNegMarginalLogPost(w, trajs, mdp, options):
         # print(f"mllh: {mllh}, mgrad1: {mgrad1}")
         llh += mllh # Adding all the individual trajectory likelihood values
         grad1 += mgrad1
+    # grad1 is the second term (marginalized) of eq 25 shibo's writeup
     grad1 = (grad1).reshape(mdp.nFeatures,1)
     prior, grad2 = calcLogPrior(w, options)  
     post = prior + llh
@@ -87,14 +88,15 @@ def calcLogPrior(w, options):
 def calcLogLLH(trajInfo, mdp, options):
 # Calculate Log Likelihood
     piL, VL, QL, H = solver.policyIteration(mdp)    # QL is a 144*4 matrix with Q values in every state for all 4 actions
-    dQ = calcGradQ(piL, mdp)
+    dQ = calcGradQ(piL, mdp)    # nFx(nSxnA) matrix
     nF = mdp.nFeatures
     nS = mdp.nStates
     nA = mdp.nActions
     eta = options.eta
-    # print("Policy: ", piL)
 #########################################################################################
     BQ = eta * QL   # eta is the inverse temp component of a boltzmann distrib
+                    # Which defines the amount of contribution each Q value has in
+                    # the agent's learning process. Here we take eta as 1.
 
     # BQSum = np.log(np.sum(np.exp(BQ), axis=1))  # Also explained in Choi-Kim MAP paper sec 2.3
     
@@ -107,35 +109,40 @@ def calcLogLLH(trajInfo, mdp, options):
     NBQ = BQ.copy()
     for i in range(nA):
         NBQ[:, i] = NBQ[:, i] - BQSum[:]    # log(map paper Choi-Kim, section 2.3 Eq 4)
-    
+
     llh = 0
     for i in range(len(trajInfo.cnt)):
         s = trajInfo.cnt[i, 0]
         a = trajInfo.cnt[i, 1]
         llh += NBQ[s, a]
 
-    # ################### Eq 26 of shibo's writeup ##########################################
+    # ################### Original code ##########################################
     # pi_sto = np.exp(BQ)
     # pi_sto_sum = np.sum(pi_sto, axis=1)
     # for i in range(nA):
     #     pi_sto[:, i] = pi_sto[:, i] / pi_sto_sum[:] # Eq 26 of shibo's writeup
     # #######################################################################################
 
-    pi_sto = np.exp(NBQ)
+    # pi_sto is a nSxnA matrix
+    pi_sto = np.exp(NBQ)    # Eq 26 of shibo's writeup
 
     dlogPi = np.zeros((nF, nS * nA))
     for f in range(nF):
         z = np.reshape(dQ[f, :], (nS, nA))
+        # temp = np.sum(pi_sto * np.reshape(dQ[f, :], (nS, nA)), axis=1)[:]
         for i in range(nA):
-            z[:, i] = z[:, i] - np.sum(pi_sto * np.reshape(dQ[f, :], (nS, nA)), axis=1)[:]  # Eq 25 of shibo's writeup
-        dlogPi[f, :] = np.reshape(z, (1, nS * nA))  # Eq 27 of shibo's writeup
+            z[:, i] = z[:, i] - np.sum(pi_sto * np.reshape(dQ[f, :], (nS, nA)), axis=1)[:]  # Eq 27, last term of shibo's writeup
+        eq27 = pi_sto * z
+        # dlogPi[f, :] = np.reshape(z, (1, nS * nA))  # Original code
+        dlogPi[f, :] = np.reshape(eq27, (1, nS * nA))  # Eq 27 of shibo's writeup
 
     grad = np.zeros(nF)
     for i in range(len(trajInfo.cnt)):
         s = trajInfo.cnt[i, 0]
         a = trajInfo.cnt[i, 1]
         j = a * nS;
-        grad = grad + dlogPi[:, j]
+        temp = dlogPi[:, j]
+        grad += dlogPi[:, j]    # 1st term inside summation of eq 25 Shibo's writeup
     # print("Grad in log llh: ", grad)    
     return llh, grad
 #################################################################################################
@@ -145,16 +152,23 @@ def calcGradQ(piL, mdp):
     nS = mdp.nStates
     nA = mdp.nActions
     Epi = np.zeros((nS, nS * nA)).astype(int)
-    # temp = piL * nS
-    # temp10 = np.arange(0, nS).reshape((nS , 1))
-    # idxReshapeDim1 = piL * nS + np.arange(0, nS).reshape((nS , 1))
+    
+    # To list all possibilities of a state space, from every state, you could end up in every 
+    # other state by doing any one of the available actions. Epi stores the expectation value
+    # of ending up in some state by doing some action, as 1.
+    # Eg: 12x12 grid, 4 actions => 144 states and 144x4 possible next actions from each state. 
+    # So your matrix would be of the size [nS,nSxnA] => [144,576]
+    # (forget about reachability constraints, this only lists the possibilities).
+
+    # The next line gives the action number you are performing from the 
+    # current state if you followed the policy action.
     idx = np.reshape(piL * nS + np.arange(0, nS).reshape((nS , 1)), nS)
+    
     for i in range(nS):
-        Epi[i, idx[i]] = 1
-    # temp1 = np.eye(nS * nA)
-    # temp2 = np.matmul(mdp.T, Epi)
-    # temp3 = temp1 - temp2   # I - (gamma*transition)*E(pi)
-    # temp4 = mdp.F
-    # temp5 = np.linalg.lstsq(temp3, temp4)
+        # Setting the expectation value for that current state and action as 1
+        Epi[i, idx[i]] = 1 
+
+    # dQ equation is provided at the end of the supplementary material of Choi and Kim's 
+    # MAP for BIRL paper, under theorem 3.
     dQ = np.linalg.lstsq(np.eye(nS * nA) - np.matmul(mdp.T, Epi), mdp.F)[0]
     return np.transpose(dQ)

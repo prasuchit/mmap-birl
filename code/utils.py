@@ -30,11 +30,15 @@ def approxeq(V, oldV, EPS):
 
 def sampleWeight(name, nF, seed=None):
     w = np.zeros((nF, 1))
+    # These are my own test weights. Could be changed if diff weights are preferred.
+    # w = np.reshape(np.linspace(0.01,0.9,nF),(nF,1)) 
+    w[:] = 0.1
+    w[-1] = 0.9
     return w
 
 def convertW2R(weight, mdp):    # Converting weights into rewards
     print("Updating mdp weights...")
-    mdp.weight = weight # This is adjusted as we move through the statespace
+    mdp.weight = weight 
     reward = np.matmul(mdp.F, weight)   # IRL algorithm originally considers the 
                                         # reward as a weighted linear combination of features
     reward = np.reshape(reward, (mdp.nStates, mdp.nActions), 'F')   # Making reward a 144*4 matrix

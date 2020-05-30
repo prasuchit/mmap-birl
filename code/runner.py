@@ -31,12 +31,12 @@ def main():
     ########################
 
     name = 'gridworld'
-    nTrajs = 1
-    nSteps = 5
+    nTrajs = 100
+    nSteps = 200
     problemSeed = 1
     init_gridSize = 4
     init_blockSize = 2
-    init_noise = 0.3
+    init_noise = 0.05
 
     problem = params.setProblemParams(name, nTrajs=nTrajs, nSteps=nSteps, gridSize=init_gridSize, blockSize=init_blockSize, noise=init_noise, seed=problemSeed)  
     #### Problem values returned #####
@@ -55,7 +55,7 @@ def main():
     # seed:1
     ###############################
 
-    numOcclusions = 1 # Number of occlusions = 1
+    numOcclusions = 0 # Number of occlusions = 1
     
     mdp = generator.generateMDP(problem)    # Returns an MDP with all the parameters set.
 
@@ -65,8 +65,7 @@ def main():
 
     trajs = data.trajSet
 
-    print("Computing Expert's true reward...")
-    truePost, _ = llh.calcNegMarginalLogPost(data.weight, trajs, mdp, opts)
+    expertPolicy = data.policy
 
     print("Sampling a new weight...")
     w0 = utils.sampleNewWeight(mdp.nFeatures, opts)
@@ -86,7 +85,7 @@ def main():
     constraint = np.matmul(H, w0)
     compare = np.where(constraint < 0)
     
-    MaxIter = 100
+    MaxIter = 1000
     ###################################################################
     # This is just copying the reference
 
@@ -107,7 +106,9 @@ def main():
 
     currWeight = np.copy(w0)
     currGrad = np.copy(initGrad)
-    sigma = 0.01
+    sigma = 0.001
+
+    initWeightDiff = np.linalg.norm(data.weight - currWeight)
     
     print("======== MAP Inference ========")
     for i in range(MaxIter):    # Finding this: δ_t * ∇_R P(R|X)
@@ -123,17 +124,24 @@ def main():
         else:
             print("  Found reusable gradient ")
             currGrad = opti[2]
-    # print("Policy: ",piInterpretation(pi.squeeze()))
 
     mdp = utils.convertW2R(currWeight, mdp) # Updating MDP weights after performing MAP inference
     finalPost, finalGrad = llh.calcNegMarginalLogPost(currWeight, trajs, mdp, opts)
+    mdp = utils.convertW2R(finalGrad, mdp) # Updating MDP weights after performing MAP inference
+    learnedPolicy, learnedValue, _, _ = solver.policyIteration(mdp)
+    print("Expert's Policy: \n",piInterpretation(expertPolicy.squeeze()))
+    print("Learned Policy: \n",piInterpretation(learnedPolicy.squeeze()))
+    # print("Learned Value: ", learnedValue)
     t1 = time.time()
-    
+
+    finWeightDiff = np.linalg.norm(data.weight - mdp.weight)
     runtime = t1 - t0
-    print("True Reward: ",truePost)
-    print("Learned Reward: ",initPost)
-    print("MAP Reward: ",finalPost)
-    print("Total Runtime: ", runtime)
+    truePost = data.trueReward
+    # print("True Reward: ",truePost)
+    # print("Learned Reward: ",initPost)
+    # print("MAP Reward: ",finalPost)
+    # print("MAP weights: \n",finalGrad)
+    # print("Total Runtime: ", runtime)
 
 def piInterpretation(policy):
     actions = {}

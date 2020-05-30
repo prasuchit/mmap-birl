@@ -26,7 +26,7 @@ def generateDemonstration(mdp, problem, numOccs=0):
     nF = mdp.nFeatures
     # Initially mdp.weight = None
     if mdp.weight is None:
-        w = utils.sampleWeight(problem.name, nF, problem.seed)  # Returns a zero mat of size nF*1
+        w = utils.sampleWeight(problem.name, nF, problem.seed)  # Returns the weights assigned by expert for the problem
     else:
         w = mdp.weight  # Uses the weight received as input parameter. 
     mdp = utils.convertW2R(w, mdp)  # Returns mdp.reward as a weighted linear combination of features
@@ -36,6 +36,19 @@ def generateDemonstration(mdp, problem, numOccs=0):
     data.trajId = np.ones(problem.nTrajs).astype(int)
     data.nTrajs = problem.nTrajs
     data.nSteps = problem.nSteps
+    stateList = trajs[:,:,0].squeeze()
+    actionList = trajs[:,:,1].squeeze()
+    trueReward = []
+    for s,a in zip(stateList,actionList):
+        trajReward = 0
+        if (problem.nTrajs > 1):
+            for s1,a1 in zip(s,a):
+                # print("Reward: ", mdp.reward[s1,a1])
+                trajReward += mdp.reward[s1,a1]
+        else: trajReward += mdp.reward[s,a]
+        trueReward.append(trajReward)
+
+    data.trueReward = max(trueReward)
 
     if numOccs > 0:
         np.random.seed(problem.seed)
@@ -82,7 +95,7 @@ def generateTrajectory(mdp, problem):
         print(w)
     policy, value, _, _ = solver.policyIteration(mdp)
     score = np.matmul(np.transpose(mdp.start), value)
-    print(' - Sum of state values for this policy: %.4f' % (score))
+    print(' - Total value of this policy: %.4f' % (score))
     trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
     print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
     # print('============ Done =============')
