@@ -37,7 +37,7 @@ def calcNegMarginalLogPost(w, trajs, mdp, options):
 
                 trajInfo = utils.getTrajInfo(trajsCopy, mdp)    # For each occluded obsv in a trajectory get info
                 # print(f"State {s}, action {a}")
-                mllh, mgrad1 = calcLogLLH(trajInfo, mdp, options)    # Getting back the log likelihood and gradient
+                mllh, mgrad1 = calcLogLLH(w, trajInfo, mdp, options)    # Getting back the log likelihood and gradient
                                                                         # for the mth trajectory.
                 # print(f"mllh: {mllh}, mgrad1: {mgrad1}")
                 llh += mllh # Adding all the individual trajectory likelihood values
@@ -46,7 +46,7 @@ def calcNegMarginalLogPost(w, trajs, mdp, options):
         print("No occlusions found...")
         trajInfo = utils.getTrajInfo(trajsCopy, mdp)    # For each occluded obsv in a trajectory get info
         # print(f"State {s}, action {a}")
-        mllh, mgrad1 = calcLogLLH(trajInfo, mdp, options)    # Getting back the log likelihood and gradient
+        mllh, mgrad1 = calcLogLLH(w, trajInfo, mdp, options)    # Getting back the log likelihood and gradient
                                                                 # for the mth trajectory.
         # print(f"mllh: {mllh}, mgrad1: {mgrad1}")
         llh += mllh # Adding all the individual trajectory likelihood values
@@ -56,13 +56,15 @@ def calcNegMarginalLogPost(w, trajs, mdp, options):
     prior, grad2 = calcLogPrior(w, options)  
     post = prior + llh
     grad = grad1 + grad2
+    # grad = -grad
+    # post = -post
 
     # print(f"posterior:\n {post},\nlog likelihood:\n {llh},\nprior:\n {prior},\ngradient:\n {grad},\ngrad1:\n {grad1},\ngrad2:\n {grad2}")
     return post, grad
 
 def calcNegLogPost(w, trajInfo, mdp, options):
 # Calculate Negative Log Posterior    
-    llh, grad1 = calcLogLLH(trajInfo, mdp, options)
+    llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
     prior, grad2 = calcLogPrior(w, options)
     post = prior + llh
     grad = grad1 + grad2
@@ -85,8 +87,9 @@ def calcLogPrior(w, options):
         
     return prior, grad
 
-def calcLogLLH(trajInfo, mdp, options):
+def calcLogLLH(w, trajInfo, mdp, options):
 # Calculate Log Likelihood
+    mdp = utils.convertW2R(w, mdp)
     piL, VL, QL, H = solver.policyIteration(mdp)    # QL is a 144*4 matrix with Q values in every state for all 4 actions
     dQ = calcGradQ(piL, mdp)    # nFx(nSxnA) matrix
     nF = mdp.nFeatures
@@ -114,7 +117,8 @@ def calcLogLLH(trajInfo, mdp, options):
     for i in range(len(trajInfo.cnt)):
         s = trajInfo.cnt[i, 0]
         a = trajInfo.cnt[i, 1]
-        llh += NBQ[s, a]
+        n = trajInfo.cnt[i, 2]
+        llh += NBQ[s, a]*n
 
     # ################### Original code ##########################################
     # pi_sto = np.exp(BQ)
@@ -124,25 +128,28 @@ def calcLogLLH(trajInfo, mdp, options):
     # #######################################################################################
 
     # pi_sto is a nSxnA matrix
+    # Soft-max policy
     pi_sto = np.exp(NBQ)    # Eq 26 of shibo's writeup
 
+    # calculate dlogPi/dw
     dlogPi = np.zeros((nF, nS * nA))
     for f in range(nF):
         z = np.reshape(dQ[f, :], (nS, nA))
         # temp = np.sum(pi_sto * np.reshape(dQ[f, :], (nS, nA)), axis=1)[:]
         for i in range(nA):
             z[:, i] = z[:, i] - np.sum(pi_sto * np.reshape(dQ[f, :], (nS, nA)), axis=1)[:]  # Eq 27, last term of shibo's writeup
-        eq27 = pi_sto * z
-        # dlogPi[f, :] = np.reshape(z, (1, nS * nA))  # Original code
-        dlogPi[f, :] = np.reshape(eq27, (1, nS * nA))  # Eq 27 of shibo's writeup
+        # eq27 = pi_sto * z
+        dlogPi[f, :] = eta * np.reshape(z, (1, nS * nA))  # Original code
+        # dlogPi[f, :] = np.reshape(eq27, (1, nS * nA))  # Eq 27 of shibo's writeup
 
+    # Calculating the gradient of the reward function
     grad = np.zeros(nF)
     for i in range(len(trajInfo.cnt)):
         s = trajInfo.cnt[i, 0]
         a = trajInfo.cnt[i, 1]
-        j = a * nS;
-        temp = dlogPi[:, j]
-        grad += dlogPi[:, j]    # 1st term inside summation of eq 25 Shibo's writeup
+        n = trajInfo.cnt[i, 2]
+        j = a * nS+s;
+        grad += n*dlogPi[:, j]    # 1st term inside summation of eq 25 Shibo's writeup
     # print("Grad in log llh: ", grad)    
     return llh, grad
 #################################################################################################
@@ -152,23 +159,27 @@ def calcGradQ(piL, mdp):
     nS = mdp.nStates
     nA = mdp.nActions
     Epi = np.zeros((nS, nS * nA)).astype(int)
-    
-    # To list all possibilities of a state space, from every state, you could end up in every 
-    # other state by doing any one of the available actions. Epi stores the expectation value
-    # of ending up in some state by doing some action, as 1.
-    # Eg: 12x12 grid, 4 actions => 144 states and 144x4 possible next actions from each state. 
-    # So your matrix would be of the size [nS,nSxnA] => [144,576]
-    # (forget about reachability constraints, this only lists the possibilities).
 
-    # The next line gives the action number you are performing from the 
-    # current state if you followed the policy action.
+    """
+    To list all possibilities of a state space, from every state, you could end up in every 
+    other state by doing any one of the available actions. Epi stores the expectation value
+    of ending up in some state by doing some action, as 1.
+    Eg: 12x12 grid, 4 actions => 144 states and 144x4 possible next actions from each state. 
+    So your matrix would be of the size [nS,nSxnA] => [144,576]
+    (forget about reachability constraints, this only lists the possibilities).
+
+    The next line gives the action number you are performing from the 
+    current state if you followed the policy action.
+    """
+
     idx = np.reshape(piL * nS + np.arange(0, nS).reshape((nS , 1)), nS)
     
     for i in range(nS):
         # Setting the expectation value for that current state and action as 1
         Epi[i, idx[i]] = 1 
 
-    # dQ equation is provided at the end of the supplementary material of Choi and Kim's 
-    # MAP for BIRL paper, under theorem 3.
+    """dQ equation is provided at the end of the supplementary material of Choi and Kim's 
+    MAP for BIRL paper, under theorem 3."""
+
     dQ = np.linalg.lstsq(np.eye(nS * nA) - np.matmul(mdp.T, Epi), mdp.F)[0]
     return np.transpose(dQ)

@@ -1,2 +1,0 @@
-H calculation in evaluate function in solver.py to be verified for correctness.
-What is this eta=1?

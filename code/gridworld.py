@@ -48,6 +48,7 @@ def init(gridSize=12, blockSize=2, noise=0.3, discount=0.99):
     # array([[1.],
     #        [1.]])
     
+    # Initial state distribution
     start = start / np.sum(start)   # This matrix will contain the value 1/144 in a 144*1 sized matrix
                                     # This gives an equiprobable value for all states to be the start state
 

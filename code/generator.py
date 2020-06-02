@@ -3,7 +3,6 @@ import options
 import solver
 import math
 import utils
-# import scipy.io as sio
 import gridworld
 np.seterr(divide='ignore', invalid='ignore')
 

@@ -31,13 +31,18 @@ def approxeq(V, oldV, EPS):
 def sampleWeight(name, nF, seed=None):
     w = np.zeros((nF, 1))
     # These are my own test weights. Could be changed if diff weights are preferred.
-    # w = np.reshape(np.linspace(0.01,0.9,nF),(nF,1)) 
-    w[:] = 0.1
-    w[-1] = 0.9
+    # w[:] = -0.01
+    # Below will induce random weights everytime
+    l = np.random.permutation(nF - 1)
+    k = math.ceil(0.3*nF)
+    idx = l[np.arange(k)]
+    w[idx] = np.random.rand(k, 1) - 1
+    # Below is common for both types of weights - goal state
+    w[-1] = 1
     return w
 
 def convertW2R(weight, mdp):    # Converting weights into rewards
-    print("Updating mdp weights...")
+    # print("Updating mdp weights...")
     mdp.weight = weight 
     reward = np.matmul(mdp.F, weight)   # IRL algorithm originally considers the 
                                         # reward as a weighted linear combination of features
@@ -82,37 +87,38 @@ def getTrajInfo(trajs, mdp):
             if s == -1 and a == -1:
                 occlusions.append([m, h])
             cnt[s, a] += 1  # Empirical occupancy matrix
-            occupancy[s, a] += math.pow(mdp.discount, h)  # discounted state occupancy (visitation frequency)
+            # occupancy[s, a] += math.pow(mdp.discount, h)  # discounted state occupancy (visitation frequency)
             nSteps += 1
     # Check Choi-Kim MAP paper page 3 starting to find this eq for mu and v
 
-    occupancy = occupancy / trajInfo.nTrajs # This is alpha from eq 1 of your choi-kim writeup
+    # occupancy = occupancy / trajInfo.nTrajs # This is alpha from eq 1 of your choi-kim writeup
     # Above line is part of eq 6 in your notes of choi-kim's paper
-    nSnA = nS*nA    # 144*4
-    reward_reshaped = mdp.reward.reshape((nSnA, 1))    # Reshaping reward matrix from 144*4 to 576*1 linear vector
-    reward_reshaped_transposed = np.transpose(reward_reshaped)  # 1*576 reward vector
-    occupancy_reshaped = occupancy.reshape((nSnA, 1))  # Reshaping occupancy matrix from 144*4 to 576*1 linear vector
+    # nSnA = nS*nA    # 144*4
+    # reward_reshaped = mdp.reward.reshape((nSnA, 1))    # Reshaping reward matrix from 144*4 to 576*1 linear vector
+    # reward_reshaped_transposed = np.transpose(reward_reshaped)  # 1*576 reward vector
+    # occupancy_reshaped = occupancy.reshape((nSnA, 1))  # Reshaping occupancy matrix from 144*4 to 576*1 linear vector
     # Check section 5.1.4 page 22 starting of Survey of IRL to see how to calculate V(s)
     # trajInfo.v = np.matmul(reward_reshaped_transposed, occupancy_reshaped).squeeze()  # 1*576 * 576*1 = 1*1   # State specific cumulative reward values V(s)
-    trajInfo.v = np.matmul(reward_reshaped_transposed, occupancy_reshaped)  # 1*576 * 576*1 = 1*1   # State specific cumulative reward values V(s)
+    # trajInfo.v = np.matmul(reward_reshaped_transposed, occupancy_reshaped)  # 1*576 * 576*1 = 1*1   # State specific cumulative reward values V(s)
     # The above eq is eq 6 in your choi-kim notes
     # empirical_occupancy = np.sum(cnt).reshape((nS, 1)) # Original code
-    empirical_occupancy = cnt.sum(axis=1).reshape((nS, 1))  # This is irrespective of the action and only wrt state,
+
+    # empirical_occupancy = cnt.sum(axis=1).reshape((nS, 1))  # This is irrespective of the action and only wrt state,
+    
     # By summing axis=1 (across columns for each row) values, we add the freq values for all actions in a state
     # Whereas without adding that the freq corresponds to an action in that state
     # Check eq 8 and 9 in you choi-kim paper notes 
-    empirical_occupancy_distributed = np.matlib.repmat(empirical_occupancy, 1, nA)  # Denominator on RHS of pi(s,a) from the paper
-    trajInfo.pi = np.nan_to_num(cnt / empirical_occupancy_distributed)   # Policy
+
+    # empirical_occupancy_distributed = np.matlib.repmat(empirical_occupancy, 1, nA)  # Denominator on RHS of pi(s,a) from the paper
+    # trajInfo.pi = np.nan_to_num(cnt / empirical_occupancy_distributed)   # Policy
+
     # trajInfo.mu = (np.sum(cnt) / nSteps).reshape((nS, 1)) # Original code
-    trajInfo.mu = (cnt.sum(axis=1) / nSteps).reshape((nS, 1)) # Mu(s) is Emperical state visitation freq for that state s
-    trajInfo.occupancy = occupancy
-    feature_transpose = np.transpose(mdp.F)
-    feature_reshaped = (feature_transpose).reshape((nS,nS))
-    # if(((mdp.F).reshape(nS,nS) == (np.transpose(mdp.F)).reshape((nS,nS))).all()):
-    #     print("They're the same!")
-    # else:
-    #     print("You were wrong!")
-    trajInfo.featExp = np.matmul(feature_reshaped,trajInfo.mu)   # mdp.F is calculated in gridworld.py
+
+    # trajInfo.mu = (cnt.sum(axis=1) / nSteps).reshape((nS, 1)) # Mu(s) is Emperical state visitation freq for that state s
+    # trajInfo.occupancy = occupancy
+    # feature_transpose = np.transpose(mdp.F)
+    # feature_reshaped = (feature_transpose).reshape((nS,nS))
+    # trajInfo.featExp = np.matmul(feature_reshaped,trajInfo.mu)   # mdp.F is calculated in gridworld.py
     trajInfo.occlusions = np.array(occlusions)
 
     N = np.count_nonzero(cnt)
@@ -138,6 +144,6 @@ def sampleNewWeight(dims, options, seed=None):
         w0 = np.clip(np.random.multivariate_normal(mean, cov), a_min=lb, a_max=ub).reshape((dims, 1))
         # Sampling a random value using the mean and covariance from a normal distribution
     else:
-        w0 = np.random.uniform(low=lb, high=ub, size=(dims))
+        w0 = np.random.uniform(low=lb, high=ub, size=(dims,1))
         # Sampling a random value from a uniform distribution b/w lb and ub
     return w0
