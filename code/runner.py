@@ -16,17 +16,17 @@ np.seterr(divide='ignore', invalid='ignore')
 def main():
 
     # choice = input("Enter the method for optimization: scipy or manual\n")
-    choice = 'scipy'
+    choice = 'manual'
 
     algo = options.algorithm('MAP_BIRL', 'BIRL', 'Gaussian')
 
     irlOpts = params.setIRLParams(algo, restart=1, optiMethod=choice, disp=True)
     
     name = 'gridworld'
-    nTrajs = 10
-    nSteps = 50
+    nTrajs = 100
+    nSteps = 200
     problemSeed = 1
-    init_gridSize = 4
+    init_gridSize = 12
     init_blockSize = 1
     init_noise = 0.3
     numOcclusions = 1
@@ -57,11 +57,12 @@ def main():
         print("Learned Policy: \n",piInterpretation(learnedPolicy.squeeze()))
 
     if(opts.optiMethod == 'manual'):
+        
         while(opts.restart == 1):
             
             print("Sampling a new weight...")
             w0 = utils.sampleNewWeight(mdp.nFeatures, opts)
-            
+
             cache = []
 
             t0 = time.time()
@@ -93,9 +94,11 @@ def main():
                     currGrad = opti[2]
             mdp = utils.convertW2R(currWeight, mdp) # Updating learned weights
             learnedPolicy, learnedValue, _, _ = solver.policyIteration(mdp)
-            if(mdp.nStates - (learnedPolicy.squeeze()==expertPolicy.squeeze()).sum() < 4):
+            err = mdp.nStates - (learnedPolicy.squeeze()==expertPolicy.squeeze()).sum()
+            if(err <= mdp.nStates/ 5):
                 opts.restart = 0
             else:
+                print(f'Num of values diff from expert: ', err,'/', mdp.nStates)
                 print("Rerunning for better results!")
 
         print("Same number of actions between expert and learned pi: ",(learnedPolicy.squeeze()==expertPolicy.squeeze()).sum(),"/",init_gridSize*init_gridSize)
