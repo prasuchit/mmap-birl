@@ -22,24 +22,20 @@ class trajNode:
             s += '  parent: ' + str(self.parent.s) + ', ' + str(self.parent.a) + '\n'
         return s
 
-def MarginalMAP(data, mdp, opts, logging=True):
+def MMAP(data, mdp, opts, logging=True):
     trajs = data.trajSet
     if opts.optimizer is None:
         print('ERR: no opimizer defined.')
         return
 
     w0 = utils.sampleNewWeight(mdp.nFeatures, opts)
-    truePost, _ = llh.calcNegMarginalLogPost(data.weight, trajs, mdp, opts)
     initPost, _ = llh.calcNegMarginalLogPost(w0, trajs, mdp, opts)
-    # end if
     t0 = time.time()
     res = minimize(llh.calcNegMarginalLogPost, w0, args=(trajs, mdp, opts), method=opts.optimizer, jac=True, options={'disp': opts.showMsg})
     t1 = time.time()
-    
     runtime = t1 - t0
     wL = res.x
     logPost = res.fun
-
 
     return wL, logPost, runtime
 
@@ -47,18 +43,12 @@ def MarginalMAP(data, mdp, opts, logging=True):
 def MAP(data, mdp, opts, logging=True):
 
     trajs = data.trajSet
-
     if opts.optimizer is None:
         print('ERR: no opimizer defined.')
         return
 
     trajInfo = utils.getTrajInfo(trajs, mdp)
-    w0 = utils.sampleNewWeight(mdp.nFeatures, opts)
-    truePost, _ = llh.calcNegLogPost(data.weight, trajInfo, mdp, opts)
-    initPost, _ = llh.calcNegLogPost(w0, trajInfo, mdp, opts)
-
     if opts.restart > 0:
-        # end if
 
         sumtime = 0
         sumLogPost = 0
@@ -66,20 +56,16 @@ def MAP(data, mdp, opts, logging=True):
             w0 = utils.sampleNewWeight(mdp.nFeatures, opts)
             initPost, _ = llh.calcNegLogPost(w0, trajInfo, mdp, opts)
             t0 = time.time()
-            res = minimize(llh.calcNegLogPost, w0, args=(trajInfo, mdp, opts), method=opts.optimizer, jac=True, options={'disp': opts.showMsg})
+            res = minimize(llh.calcNegLogPost, w0, args=(trajInfo, mdp, opts), tol=1e-8, method=opts.optimizer, jac=True, options={'disp': opts.showMsg})
             t1 = time.time()
             sumtime += t1 - t0
             wL = res.x
             logPost = res.fun
             sumLogPost += logPost
-        #end for
         runtime = sumtime / opts.restart
         logPost = sumLogPost / opts.restart
-
-
+        
     else:
-
-        # end if
         t0 = time.time()
         res = minimize(llh.calcNegLogPost, w0, args=(trajInfo, mdp, opts), method=opts.optimizer, jac=True, options={'disp': opts.showMsg})
         t1 = time.time()
@@ -87,5 +73,4 @@ def MAP(data, mdp, opts, logging=True):
         runtime = t1 - t0
         wL = res.x
         logPost = res.fun
-
     return wL, logPost, runtime

@@ -1,4 +1,4 @@
-# import birl
+import birl
 import parameters as params
 import generator
 import options
@@ -8,31 +8,23 @@ import numpy as np
 import copy
 import solver
 import time
+from scipy.optimize._minimize import minimize
+from tqdm.gui import tqdm
 np.seterr(divide='ignore', invalid='ignore')
 
 
 def main():
-    algo = options.algorithm('MAP_BIRL', 'BIRL', 'Gaussian') # Calling the class algorithm inside options and sending args
 
-    irlOpts = params.setIRLParams(algo, restart=0, disp=True) # This method is from parameters.py
+    # choice = input("Enter the method for optimization: scipy or manual\n")
+    choice = 'scipy'
 
-    #### irlOpts Output ####
-    # algo:'MAP_BIRL'
-    # eta:1.0
-    # lb:-1
-    # llhType:'BIRL'
-    # mu:0.0
-    # optimizer:'L-BFGS-B'
-    # priorType:'Gaussian'
-    # restart:0
-    # showMsg:True
-    # sigma:0.1
-    # ub:1
-    ########################
+    algo = options.algorithm('MAP_BIRL', 'BIRL', 'Gaussian')
 
+    irlOpts = params.setIRLParams(algo, restart=1, optiMethod=choice, disp=True)
+    
     name = 'gridworld'
-    nTrajs = 200
-    nSteps = 500
+    nTrajs = 10
+    nSteps = 50
     problemSeed = 1
     init_gridSize = 4
     init_blockSize = 1
@@ -43,24 +35,8 @@ def main():
 
     problem = params.setProblemParams(name, nTrajs=nTrajs, nSteps=nSteps, gridSize=init_gridSize, blockSize=init_blockSize, noise=init_noise, seed=problemSeed)  
     
-    #### Problem values returned #####
-    # blockSize:2
-    # discount:0.9
-    # filename:'gridworld_12x2'
-    # gridSize:12
-    # initSeed:1
-    # iters:array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-    # nExperts:1
-    # nExps:10
-    # nSteps:10
-    # nTrajs:1
-    # name:'gridworld'
-    # noise:0.3
-    # seed:1
-    #################################
+    mdp = generator.generateMDP(problem)
     
-    mdp = generator.generateMDP(problem)    # Returns an MDP with all the parameters set.
-
     data = generator.generateDemonstration(mdp, problem, numOcclusions)
 
     opts = irlOpts
@@ -68,83 +44,84 @@ def main():
     trajs = data.trajSet
 
     expertPolicy = data.policy
-
-    print("Sampling a new weight...")
-    w0 = utils.sampleNewWeight(mdp.nFeatures, opts)
     
-    cache = []
+    if(opts.optiMethod == 'scipy'):
 
-    t0 = time.time()
-    print("Compute initial posterior and gradient ...")
-    initPost, initGrad = llh.calcNegMarginalLogPost(w0, trajs, mdp, opts)
-    print("Compute initial opimality region ...")
-    pi, H = computeOptmRegn(mdp, w0)   # Page 6 Algo 1 steps 2,3 Map inference paper
-    print("Cache the results ...")
-    cache.append([pi, H, initGrad])
+        print("Calling MMAP BIRL")
+        wL, logPost, runtime = birl.MMAP(data, mdp, opts)
+        print("Time taken: ", runtime," seconds")
+        mdp = utils.convertW2R(wL, mdp) # Updating learned weights
 
-    constraint = np.matmul(H, w0)
-    compare = np.where(constraint < 0)
-    
-    ###################################################################
-    # This is just copying the reference
+        learnedPolicy, learnedValue, _, _ = solver.policyIteration(mdp)
+        print("Same number of actions between expert and learned pi: ",(learnedPolicy.squeeze()==expertPolicy.squeeze()).sum(),"/",init_gridSize*init_gridSize)
+        print("Learned Policy: \n",piInterpretation(learnedPolicy.squeeze()))
 
-    # copy_list = org_list
+    if(opts.optiMethod == 'manual'):
+        while(opts.restart == 1):
+            
+            print("Sampling a new weight...")
+            w0 = utils.sampleNewWeight(mdp.nFeatures, opts)
+            
+            cache = []
 
-    # you should use
+            t0 = time.time()
+            
+            print("Compute initial posterior and gradient ...")
+            initPost, initGrad = llh.calcNegMarginalLogPost(w0, trajs, mdp, opts)
+            print("Compute initial opimality region ...")
+            pi, H = computeOptmRegn(mdp, w0)
+            print("Cache the results ...")
+            cache.append([pi, H, initGrad])
+            currWeight = np.copy(w0)
+            currGrad = np.copy(initGrad)
+            
+            print("======== MAP Inference ========")
+            for i in range(MaxIter):    # Finding this: R_new = R + δ_t * ∇_R P(R|X)
+                print("- %d iter" % (i))
+                weightUpdate = (sigma * currGrad)
+                weightUpdate = np.reshape(weightUpdate,(mdp.nFeatures,1))
+                currWeight = currWeight + weightUpdate
+                opti = reuseCacheGrad(currWeight, cache)
+                if opti is None:
+                    print("  No existing cached gradient reusable ")
+                    pi, H = computeOptmRegn(mdp, currWeight)
+                    post, currGrad = llh.calcNegMarginalLogPost(currWeight, trajs, mdp, opts)
+                    # print("Posterior is: ", post)
+                    cache.append([pi, H, currGrad])
+                else:
+                    print("  Found reusable gradient ")
+                    currGrad = opti[2]
+            mdp = utils.convertW2R(currWeight, mdp) # Updating learned weights
+            learnedPolicy, learnedValue, _, _ = solver.policyIteration(mdp)
+            if(mdp.nStates - (learnedPolicy.squeeze()==expertPolicy.squeeze()).sum() < 4):
+                opts.restart = 0
+            else:
+                print("Rerunning for better results!")
 
-    # copy_list = org_list[:]    # make a slice that is the whole list
+        print("Same number of actions between expert and learned pi: ",(learnedPolicy.squeeze()==expertPolicy.squeeze()).sum(),"/",init_gridSize*init_gridSize)
+        print("Expert's Policy: \n",piInterpretation(expertPolicy.squeeze()))
+        print("Learned Policy: \n",piInterpretation(learnedPolicy.squeeze()))
+        t1 = time.time()
+        runtime = t1 - t0
+        print("Time taken: ", runtime," seconds")
 
-    # or
+    else:
+        print("Please check your input!")
 
-    # copy_list = list(org_list) 
+def computeOptmRegn(mdp, w):
+    mdp = utils.convertW2R(w, mdp)
+    piL, _, _, H = solver.policyIteration(mdp)
+    return piL, H
 
-    # In case of list of lists, use deep copy
+def reuseCacheGrad(w, cache):
+    for opti in cache:
+        H = opti[1]
+        constraint = np.matmul(H, w)
+        compare = np.where(constraint < 0)
+        if compare[0].size > 0:
+            return opti
 
-    # copy_list = copy.deepcopy(org_list)
-    ###################################################################
-
-    currWeight = np.copy(w0)
-    currGrad = np.copy(initGrad)
-
-    initWeightDiff = np.linalg.norm(data.weight - currWeight)
-    
-    print("======== MAP Inference ========")
-    for i in range(MaxIter):    # Finding this: δ_t * ∇_R P(R|X)
-        print("- %d iter" % (i))
-        currWeight += sigma * currGrad
-        opti = reuseCacheGrad(currWeight, cache)
-        if opti is None:
-            print("  No existing cached gradient reusable ")
-            pi, H = computeOptmRegn(mdp, currWeight)
-            post, currGrad = llh.calcNegMarginalLogPost(currWeight, trajs, mdp, opts)
-            print("Posterior is: ", post)
-            cache.append([pi, H, currGrad])
-        else:
-            print("  Found reusable gradient ")
-            currGrad = opti[2]
-
-    mapWeightDiff = np.linalg.norm(data.weight - currWeight)
-    mdp = utils.convertW2R(currWeight, mdp) # Updating MDP weights after performing MAP inference
-    MAPpi, MAPvalue, _, _ = solver.policyIteration(mdp)
-    finalPost, finalGrad = llh.calcNegMarginalLogPost(currWeight, trajs, mdp, opts)
-    mdp = utils.convertW2R(finalGrad, mdp) # Updating MDP weights after performing MAP inference
-    learnedPolicy, learnedValue, _, _ = solver.policyIteration(mdp)
-    print("Same number of actions between expert and MAPpi: ",(MAPpi.squeeze()==expertPolicy.squeeze()).sum(),"/",init_gridSize*init_gridSize)
-    print("Same number of actions between expert and learned pi: ",(learnedPolicy.squeeze()==expertPolicy.squeeze()).sum(),"/",init_gridSize*init_gridSize)
-    print("Expert's Policy: \n",piInterpretation(expertPolicy.squeeze()))
-    print("After MAP policy: \n",piInterpretation(MAPpi.squeeze()))
-    # print("MAP Value: ", np.mean(MAPvalue))
-    print("Learned Policy: \n",piInterpretation(learnedPolicy.squeeze()))
-    # print("Learned Value: ", np.mean(learnedValue))
-    t1 = time.time()
-    finWeightDiff = np.linalg.norm(data.weight - mdp.weight)
-    runtime = t1 - t0
-    truePost = data.trueReward
-    # print("True Reward: ",truePost)
-    # print("Learned Reward: ",initPost)
-    # print("MAP Reward: ",finalPost)
-    # print("MAP weights: \n",finalGrad)
-    # print("Total Runtime: ", runtime)
+    return None
 
 def piInterpretation(policy):
     actions = {}
@@ -158,22 +135,6 @@ def piInterpretation(policy):
         elif(policy[i] == 3):
             actions[i] = 'South'
     return actions
-
-def reuseCacheGrad(w, cache):
-    for opti in cache:
-        H = opti[1]
-        constraint = np.matmul(H, w)
-        compare = np.where(constraint < 0)
-        if compare[0].size > 0:
-            return opti
-
-    return None
-
-
-def computeOptmRegn(mdp, w):
-    mdp = utils.convertW2R(w, mdp)
-    piL, _, _, H = solver.policyIteration(mdp)
-    return piL, H
 
 
 if __name__ == "__main__":

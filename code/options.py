@@ -3,52 +3,52 @@ np.seterr(divide='ignore', invalid='ignore')
 
 
 class algorithm:
-    def __init__(self, name=None, llhType=None, priorType=None):    # Parameterized constructor for class
+    def __init__(self, name=None, llhType=None, priorType=None): 
         self.name = name
-        self.llhType = llhType  # Log likelihood type
+        self.llhType = llhType 
         self.priorType = priorType
 
 
 class demonstrations:   
-    def __init__(self): # Parameterized constructor for class
+    def __init__(self):
         self.weight = None
         self.policy = None
         self.trajId = None
         self.trajSet = None
         self.nTrajs = None
         self.nSteps = None
-        self.trueReward = None
 
 
 class trajInfo:
-    def __init__(self): # Parameterized constructor for class
+    def __init__(self):
         self.nTrajs = None
         self.nSteps = None
-        self.v = None   # State specific cumulative reward values V(s)
-        self.pi = None  # Policy
-        self.mu = None  # Mu(pi) is the state visitation frequency matrix for that policy pi
-        self.occ = None # state occupancy (visitation frequency)
-        self.featExp = None # Feature expectation
+        self.v = None 
+        self.pi = None
+        self.mu = None
+        self.occ = None
+        self.featExp = None
         self.cnt = None
         self.occlusions = None
 
 
 class irlOptions:
-    def __init__(self): # Parameterized constructor for class
+    def __init__(self):
         self.alg = None
-        self.llhType = None # Log likelihood type
+        self.llhType = None
         self.priorType = None
         self.restart = None
         self.showMsg = None
-        self.lb = None  # Lower bound
-        self.ub = None  # Upper bound
+        self.lb = None
+        self.ub = None
         self.eta = None
         self.optimizer = None
         self.mu = None
         self.sigma = None
+        self.optiMethod = None
 
 class problem:
-    def __init__(self): # Parameterized constructor for class
+    def __init__(self):
         self.name = None
         self.iters = None
         self.discount = None
