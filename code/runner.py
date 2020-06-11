@@ -16,18 +16,18 @@ np.seterr(divide='ignore', invalid='ignore')
 def main():
 
     # choice = input("Enter the method for optimization: scipy or manual\n")
-    choice = 'manual'
+    choice = 'scipy'
 
     algo = options.algorithm('MAP_BIRL', 'BIRL', 'Gaussian')
 
     irlOpts = params.setIRLParams(algo, restart=1, optiMethod=choice, disp=True)
     
     name = 'gridworld'
-    nTrajs = 100
-    nSteps = 200
+    nTrajs = 200
+    nSteps = 500
     problemSeed = 1
-    init_gridSize = 12
-    init_blockSize = 1
+    init_gridSize = 10
+    init_blockSize = 2
     init_noise = 0.3
     numOcclusions = 1
     MaxIter = 100
@@ -56,13 +56,14 @@ def main():
         print("Same number of actions between expert and learned pi: ",(learnedPolicy.squeeze()==expertPolicy.squeeze()).sum(),"/",init_gridSize*init_gridSize)
         print("Learned Policy: \n",piInterpretation(learnedPolicy.squeeze()))
 
-    if(opts.optiMethod == 'manual'):
+    elif(opts.optiMethod == 'manual'):
         
+
         while(opts.restart == 1):
-            
+
             print("Sampling a new weight...")
             w0 = utils.sampleNewWeight(mdp.nFeatures, opts)
-
+            
             cache = []
 
             t0 = time.time()
@@ -95,21 +96,47 @@ def main():
             mdp = utils.convertW2R(currWeight, mdp) # Updating learned weights
             learnedPolicy, learnedValue, _, _ = solver.policyIteration(mdp)
             err = mdp.nStates - (learnedPolicy.squeeze()==expertPolicy.squeeze()).sum()
-            if(err <= mdp.nStates/ 5):
+            if(err < mdp.nStates/ 4):
                 opts.restart = 0
+                #Normalized weights
+                wL = (currWeight-min(currWeight))/(max(currWeight)-min(currWeight))
             else:
-                print(f'Num of values diff from expert: ', err,'/', mdp.nStates)
+                #Normalized weights
+                # w0 = (currWeight-min(currWeight))/(max(currWeight)-min(currWeight))
+                print('Num of values diff from expert: {} / {}'.format(err, mdp.nStates))
                 print("Rerunning for better results!")
-
         print("Same number of actions between expert and learned pi: ",(learnedPolicy.squeeze()==expertPolicy.squeeze()).sum(),"/",init_gridSize*init_gridSize)
-        print("Expert's Policy: \n",piInterpretation(expertPolicy.squeeze()))
-        print("Learned Policy: \n",piInterpretation(learnedPolicy.squeeze()))
+        # print("Expert's Policy: \n",piInterpretation(expertPolicy.squeeze()))
+        # print("Learned Policy: \n",piInterpretation(learnedPolicy.squeeze()))
         t1 = time.time()
         runtime = t1 - t0
         print("Time taken: ", runtime," seconds")
 
     else:
         print("Please check your input!")
+
+    mdp = utils.convertW2R(data.weight, mdp)
+    piE, VE, QE, HE = solver.policyIteration(mdp)
+    vE = np.matmul(np.matmul(data.weight.T,HE.T),mdp.start)
+
+    mdp = utils.convertW2R(wL, mdp)
+    piL, VL, QL, HL = solver.policyIteration(mdp)
+    vL =np.matmul(np.matmul(wL.T,HL.T),mdp.start)
+
+    d  = np.zeros((mdp.nStates, 1))
+    for s in range(mdp.nStates):
+        ixE = QE[s, :] == max(QE[s, :])
+        ixL = QL[s, :] == max(QL[s, :])
+        if ((ixE == ixL).all()):
+            d[s] = 0
+        else:
+            d[s] = 1
+
+    rewardDiff = np.linalg.norm(data.weight - wL)
+    valueDiff  = abs(vE - vL)
+    policyDiff = np.sum(d)/mdp.nStates
+    print("Reward Diff: {}| Value Diff: {}| Policy Diff: {}".format(rewardDiff,valueDiff.squeeze(),policyDiff))
+###########################################################################################
 
 def computeOptmRegn(mdp, w):
     mdp = utils.convertW2R(w, mdp)

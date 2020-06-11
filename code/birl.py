@@ -29,6 +29,7 @@ def MMAP(data, mdp, opts, logging=True):
         return
 
     w0 = utils.sampleNewWeight(mdp.nFeatures, opts)
+    # w0 = data.weight
     initPost, _ = llh.calcNegMarginalLogPost(w0, trajs, mdp, opts)
     t0 = time.time()
     res = minimize(llh.calcNegMarginalLogPost, w0, args=(trajs, mdp, opts), method=opts.optimizer, jac=True, options={'disp': opts.showMsg})

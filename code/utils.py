@@ -2,6 +2,7 @@ import numpy as np
 import math
 import options
 import numpy.matlib
+from operator import mod
 np.seterr(divide='ignore', invalid='ignore')
 
 class trajNode:
@@ -28,6 +29,28 @@ def sampleWeight(name, nF, seed=None):
     w = np.random.rand(nF, 1)
     return w
 
+def sid2info(sid, nS, nL, nG):
+
+    tid = sid - 1;
+    y3  = mod(tid, nG) + 1;
+    tid = (tid - y3 + 1)/nG;
+    y2  = mod(tid, nG) + 1;
+    tid = (tid - y2 + 1)/nG;
+    y1  = mod(tid, nG) + 1;
+    tid = (tid - y1 + 1)/nG;
+    myx = mod(tid, nL) + 1;
+    tid = (tid - myx + 1)/nL;
+    spd = mod(tid, nS) + 1;
+
+def info2sid(spd, myx, y1, y2, y3, nS, nL, nG):
+
+    sid = spd;
+    sid = (sid - 1)*nL + myx;
+    sid = (sid - 1)*nG + y1;
+    sid = (sid - 1)*nG + y2;
+    sid = (sid - 1)*nG + y3;
+
+    
 def convertW2R(weight, mdp):    
     mdp.weight = weight 
     reward = np.matmul(mdp.F, weight)

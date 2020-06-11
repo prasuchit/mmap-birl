@@ -63,7 +63,7 @@ def calcNegLogPost(w, trajInfo, mdp, options):
     post = -post
 
     if np.isinf(post) or np.isinf(-post):
-        print('ERROR: prior: %f, llh:%f, eta:%f, w:%f %f \n', prior, llh, options.eta, np.amin(w), np.amax(w));
+        print('ERROR: prior: %f, llh: %f, eta: %f, w: %f %f \n', prior, llh, options.eta, np.amin(w), np.amax(w))
     
     return post, grad
 
