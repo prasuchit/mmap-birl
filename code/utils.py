@@ -28,6 +28,13 @@ def sampleWeight(name, nF, seed=None):
     w = np.zeros((nF, 1))
     w = np.random.rand(nF, 1)
     return w
+    
+def convertW2R(weight, mdp):    
+    mdp.weight = weight 
+    reward = np.matmul(mdp.F, weight)
+    reward = np.reshape(reward, (mdp.nStates, mdp.nActions), order='F')
+    mdp.reward = reward
+    return mdp
 
 def sid2info(sid, nS, nL, nG):
 
@@ -49,14 +56,6 @@ def info2sid(spd, myx, y1, y2, y3, nS, nL, nG):
     sid = (sid - 1)*nG + y1;
     sid = (sid - 1)*nG + y2;
     sid = (sid - 1)*nG + y3;
-
-    
-def convertW2R(weight, mdp):    
-    mdp.weight = weight 
-    reward = np.matmul(mdp.F, weight)
-    reward = np.reshape(reward, (mdp.nStates, mdp.nActions), order='F')
-    mdp.reward = reward
-    return mdp
 
 def QfromV(V, mdp): 
     nS = mdp.nStates
@@ -82,7 +81,6 @@ def getTrajInfo(trajs, mdp):
     trajInfo.nTrajs = trajs.shape[0]
     trajInfo.nSteps = trajs.shape[1]
     cnt = np.zeros((nS, nA))
-    occupancy = np.zeros((nS, nA))
     nSteps = 0
     occlusions = []
 

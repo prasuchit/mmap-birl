@@ -7,7 +7,7 @@ import gridworld
 np.seterr(divide='ignore', invalid='ignore')
 
 
-def generateMDP(problem, discount=0.9):
+def generateMDP(problem, discount=0.99):
     if problem.name == 'gridworld':
         mdp = gridworld.init(problem.gridSize, problem.blockSize, problem.noise, problem.discount)
     
