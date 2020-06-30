@@ -5,34 +5,47 @@ import math
 import copy
 from tqdm import tqdm
 from scipy.special._logsumexp import logsumexp
+from multiprocessing import Pool
+import time
 np.seterr(divide='ignore', invalid='ignore')
 np.warnings.filterwarnings('ignore')
 np.set_printoptions(threshold=np.inf)
 
 def calcNegMarginalLogPost(w, trajs, mdp, options):
 
-    originalInfo = utils.getTrajInfo(trajs, mdp)
-    occs = originalInfo.occlusions
-    llh = 0
-    grad1 = 0
-    trajsCopy = copy.copy(trajs)
-    if(-1 in trajsCopy):
-        # print("Compute posterior with marginalization...")
-        # for s in (range(mdp.nStates)):
-        for s in tqdm(range(mdp.nStates)):
-            for a in range(mdp.nActions):
-                trajsCopy[occs[0,0], occs[0,1], 0] = s
-                trajsCopy[occs[0,0], occs[0,1], 1] = a
-                trajInfo = utils.getTrajInfo(trajsCopy, mdp)   
-                mllh, mgrad1 = calcLogLLH(w, trajInfo, mdp, options)    
-                llh += mllh 
+    with Pool(processes = 5) as pool:
+
+        originalInfo = utils.getTrajInfo(trajs, mdp)
+        occs = originalInfo.occlusions
+        llh = 0
+        grad1 = 0
+        mresult = []
+        if(len(occs) > 0):
+            # print("Compute posterior with marginalization...")
+            # start_t = time.time()
+            for o in (range(len(occs))):
+                trajsCopy = copy.copy(trajs)
+                for s in (range(mdp.nStates)):
+                    for a in range(mdp.nActions):
+                        trajsCopy[occs[o,0], occs[o,1], 0] = s
+                        trajsCopy[occs[o,0], occs[o,1], 1] = a
+                        trajInfo = utils.getTrajInfo(trajsCopy, mdp)
+                        mresult.append(pool.apply_async(calcLogLLH, (w, trajInfo, mdp, options)))
+
+            for i in tqdm(range(len(mresult))):
+                mllh, mgrad1 = mresult[i].get()
+                llh += mllh
                 grad1 += mgrad1
-        grad1 = np.reshape(grad1,(mdp.nFeatures,1))
-    else:
-        # print("No occlusions found...")
-        trajInfo = utils.getTrajInfo(trajsCopy, mdp)
-        llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
-        grad1 = np.reshape(grad1,(mdp.nFeatures,1))
+            # end_t = time.time()
+            # span = end_t - start_t
+            # print(span)
+            grad1 = np.reshape(grad1,(mdp.nFeatures,1))
+        else:
+            # print("No occlusions found...")
+            trajsCopy = copy.copy(trajs)
+            trajInfo = utils.getTrajInfo(trajsCopy, mdp)
+            llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
+            grad1 = np.reshape(grad1,(mdp.nFeatures,1))
         
     prior, grad2 = calcLogPrior(w, options)
     grad2 = np.reshape(grad2,(mdp.nFeatures,1))
@@ -49,7 +62,7 @@ def calcNegMarginalLogPost(w, trajs, mdp, options):
         raise SystemExit(0)
 
     if np.isinf(post) or np.isinf(-post) or np.isnan(post):
-        print(f'ERROR: prior: %f, llh:%f, eta:%f, w:%f %f \n', prior, llh, options.eta, np.amin(w), np.amax(w)); 
+        print(f'ERROR: prior: %f, llh:%f, eta:%f, w:%f %f \n', prior, llh, options.eta, np.amin(w), np.amax(w)) 
         raise SystemExit(0)
     # print("Posterior inside llh: ", post)
     return post, grad

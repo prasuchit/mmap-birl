@@ -17,6 +17,7 @@ class demonstrations:
         self.trajSet = None
         self.nTrajs = None
         self.nSteps = None
+        self.seed = None
 
 
 class trajInfo:
@@ -60,3 +61,5 @@ class problem:
         self.noise = None
         self.filename = None
         self.seed = None
+        self.nSpeed = None
+        self.nLane = None

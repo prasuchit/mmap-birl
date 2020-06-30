@@ -26,8 +26,8 @@ def init(gridSize=12, blockSize=2, noise=0.3, discount=0.99):
 
             for a in range(nA):
                 for a2 in range(nA):
-                    T[ns[a2], s, a] = T[ns[a2], s, a] + (noise / nA); # Adding noise per action to each transition 
-                T[ns[a], s, a] = T[ns[a], s, a] + (1 - noise);    # Rest of the prob given to the intended action
+                    T[ns[a2], s, a] = T[ns[a2], s, a] + (noise / nA) # Adding noise per action to each transition 
+                T[ns[a], s, a] = T[ns[a], s, a] + (1 - noise)    # Rest of the prob given to the intended action
     
     F = np.zeros((nS, nF)).astype(int)
     for y in range(gridSize):

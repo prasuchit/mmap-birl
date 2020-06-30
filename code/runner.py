@@ -16,24 +16,33 @@ np.seterr(divide='ignore', invalid='ignore')
 def main():
 
     # choice = input("Enter the method for optimization: scipy or manual\n")
-    choice = 'scipy'
-
-    algo = options.algorithm('MAP_BIRL', 'BIRL', 'Gaussian')
-
-    irlOpts = params.setIRLParams(algo, restart=1, optiMethod=choice, disp=True)
-    
-    name = 'gridworld'
-    nTrajs = 200
-    nSteps = 500
+    choice = 'manual'
+    # choice = 'scipy'
+    # algoName = 'MAP_BIRL'
+    algoName = 'MMAP_BIRL'
+    llhName = 'BIRL'
+    priorName = 'Gaussian'
+    # probName = 'highway'
+    probName = 'gridworld'
+    nTrajs = 5
+    nSteps = 10
     problemSeed = 1
-    init_gridSize = 10
+    init_gridSize = 4
     init_blockSize = 2
+    init_nLanes = 3     # For highway problem
+    init_nSpeeds = 2    # For highway problem
     init_noise = 0.3
     numOcclusions = 1
     MaxIter = 100
-    sigma = 0.01
+    sigma = 1/MaxIter
+    alpha = 1   # learning rate
+    decay = .95
 
-    problem = params.setProblemParams(name, nTrajs=nTrajs, nSteps=nSteps, gridSize=init_gridSize, blockSize=init_blockSize, noise=init_noise, seed=problemSeed)  
+    algo = options.algorithm(algoName, llhName, priorName)
+
+    irlOpts = params.setIRLParams(algo, restart=1, optiMethod=choice, disp=True)
+
+    problem = params.setProblemParams(probName, nTrajs=nTrajs, nSteps=nSteps, gridSize=init_gridSize, blockSize=init_blockSize, nLanes=init_nLanes, nSpeeds=init_nSpeeds, noise=init_noise, seed=problemSeed)  
     
     mdp = generator.generateMDP(problem)
     
@@ -46,23 +55,26 @@ def main():
     expertPolicy = data.policy
     
     if(opts.optiMethod == 'scipy'):
+        if opts.alg == 'MMAP_BIRL':
+            print("Calling MMAP BIRL")
+            wL, logPost, runtime = birl.MMAP(data, mdp, opts)
+            print("Learned weights: \n", wL)
+            print("Time taken: ", runtime," seconds")
 
-        print("Calling MMAP BIRL")
-        wL, logPost, runtime = birl.MMAP(data, mdp, opts)
-        print("Time taken: ", runtime," seconds")
-        mdp = utils.convertW2R(wL, mdp) # Updating learned weights
-
-        learnedPolicy, learnedValue, _, _ = solver.policyIteration(mdp)
-        print("Same number of actions between expert and learned pi: ",(learnedPolicy.squeeze()==expertPolicy.squeeze()).sum(),"/",init_gridSize*init_gridSize)
-        print("Learned Policy: \n",piInterpretation(learnedPolicy.squeeze()))
+        elif opts.alg == 'MAP_BIRL':
+            print("Calling MAP BIRL")
+            wL, logPost, runtime = birl.MAP(data, mdp, opts)
+            print("Learned weights: \n", wL)
+            print("Time taken: ", runtime," seconds")
+        else:
+            print('Incorrect algorithm chosen: ', opts.alg)
 
     elif(opts.optiMethod == 'manual'):
         
 
-        while(opts.restart == 1):
-
+        while(opts.restart != 0):
             print("Sampling a new weight...")
-            w0 = utils.sampleNewWeight(mdp.nFeatures, opts)
+            w0 = utils.sampleNewWeight(mdp.nFeatures, opts, problemSeed)
             
             cache = []
 
@@ -80,7 +92,8 @@ def main():
             print("======== MAP Inference ========")
             for i in range(MaxIter):    # Finding this: R_new = R + δ_t * ∇_R P(R|X)
                 print("- %d iter" % (i))
-                weightUpdate = (sigma * currGrad)
+                weightUpdate = (sigma * alpha * currGrad)
+                alpha *= decay
                 weightUpdate = np.reshape(weightUpdate,(mdp.nFeatures,1))
                 currWeight = currWeight + weightUpdate
                 opti = reuseCacheGrad(currWeight, cache)
@@ -93,21 +106,44 @@ def main():
                 else:
                     print("  Found reusable gradient ")
                     currGrad = opti[2]
-            mdp = utils.convertW2R(currWeight, mdp) # Updating learned weights
-            learnedPolicy, learnedValue, _, _ = solver.policyIteration(mdp)
-            err = mdp.nStates - (learnedPolicy.squeeze()==expertPolicy.squeeze()).sum()
-            if(err < mdp.nStates/ 4):
-                opts.restart = 0
-                #Normalized weights
-                wL = (currWeight-min(currWeight))/(max(currWeight)-min(currWeight))
+
+            wL = (currWeight-min(currWeight))/(max(currWeight)-min(currWeight))
+
+            mdp = utils.convertW2R(data.weight, mdp)
+            piE, VE, QE, HE = solver.policyIteration(mdp)
+            vE = np.matmul(np.matmul(data.weight.T,HE.T),mdp.start)
+
+            mdp = utils.convertW2R(wL, mdp)
+            piL, VL, QL, HL = solver.policyIteration(mdp)
+            vL = np.matmul(np.matmul(wL.T,HL.T),mdp.start)
+
+            d  = np.zeros((mdp.nStates, 1))
+            for s in range(mdp.nStates):
+                ixE = QE[s, :] == max(QE[s, :])
+                ixL = QL[s, :] == max(QL[s, :])
+                if ((ixE == ixL).all()):
+                    d[s] = 0
+                else:
+                    d[s] = 1
+
+            rewardDiff = np.linalg.norm(data.weight - wL)
+            valueDiff  = abs(vE - vL)
+            policyDiff = np.sum(d)/mdp.nStates
+
+            if(policyDiff > 0.15 or rewardDiff > 1.5):
+                print(f"Rerunning for better results! Policy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
+                opts.restart += 1
+                if(opts.restart > 5):
+                    print("Restarted 5 times already! Exiting!")
+                    exit(0)
             else:
-                #Normalized weights
-                # w0 = (currWeight-min(currWeight))/(max(currWeight)-min(currWeight))
-                print('Num of values diff from expert: {} / {}'.format(err, mdp.nStates))
-                print("Rerunning for better results!")
-        print("Same number of actions between expert and learned pi: ",(learnedPolicy.squeeze()==expertPolicy.squeeze()).sum(),"/",init_gridSize*init_gridSize)
+                opts.restart = 0
+
+        print("Same number of actions between expert and learned pi: ",(piL.squeeze()==piE.squeeze()).sum(),"/",mdp.nStates)
         # print("Expert's Policy: \n",piInterpretation(expertPolicy.squeeze()))
         # print("Learned Policy: \n",piInterpretation(learnedPolicy.squeeze()))
+        # print("Sampled weights: \n", w0)
+        print("Learned weights: \n", wL)
         t1 = time.time()
         runtime = t1 - t0
         print("Time taken: ", runtime," seconds")
@@ -115,27 +151,7 @@ def main():
     else:
         print("Please check your input!")
 
-    mdp = utils.convertW2R(data.weight, mdp)
-    piE, VE, QE, HE = solver.policyIteration(mdp)
-    vE = np.matmul(np.matmul(data.weight.T,HE.T),mdp.start)
-
-    mdp = utils.convertW2R(wL, mdp)
-    piL, VL, QL, HL = solver.policyIteration(mdp)
-    vL =np.matmul(np.matmul(wL.T,HL.T),mdp.start)
-
-    d  = np.zeros((mdp.nStates, 1))
-    for s in range(mdp.nStates):
-        ixE = QE[s, :] == max(QE[s, :])
-        ixL = QL[s, :] == max(QL[s, :])
-        if ((ixE == ixL).all()):
-            d[s] = 0
-        else:
-            d[s] = 1
-
-    rewardDiff = np.linalg.norm(data.weight - wL)
-    valueDiff  = abs(vE - vL)
-    policyDiff = np.sum(d)/mdp.nStates
-    print("Reward Diff: {}| Value Diff: {}| Policy Diff: {}".format(rewardDiff,valueDiff.squeeze(),policyDiff))
+    print(f"Reward Diff: {rewardDiff}| Value Diff: {valueDiff.squeeze()}| Policy Diff: {policyDiff}")
 ###########################################################################################
 
 def computeOptmRegn(mdp, w):

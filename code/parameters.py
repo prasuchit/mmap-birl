@@ -15,15 +15,15 @@ def setIRLParams(alg=None, restart=0, optimizer='Newton-CG', optiMethod= 'scipy'
     irlOpts.optiMethod = optiMethod
     if irlOpts.priorType == 'Gaussian':
         irlOpts.mu = 0.0
-        irlOpts.sigma = 0.1
+        irlOpts.sigma = 0.5
 
-    if irlOpts.alg == 'MAP_BIRL':
+    if irlOpts.alg == 'MAP_BIRL' or irlOpts.alg == 'MMAP_BIRL':
         if irlOpts.llhType == 'BIRL':
-            irlOpts.eta = 2.0
+            irlOpts.eta = 3
 
     return irlOpts
 
-def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, gridSize=12, blockSize=2, noise=0.3, seed=None):
+def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, gridSize=12, blockSize=2, nLanes=3, nSpeeds=2, noise=0.3, seed=None):
     problem = options.problem()
     problem.name = name
     problem.iters = np.arange(iters)
@@ -41,4 +41,9 @@ def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, gridS
         problem.noise = noise
         problem.filename = name + '_' + str(problem.gridSize) + 'x' + str(problem.blockSize)
 
+    elif problem.name == 'highway':
+        problem.nSpeeds  = nSpeeds
+        problem.nLanes   = nLanes
+        problem.gridSize   = gridSize
+        problem.filename = name + '_' + str(problem.gridSize) + 'x' + str(problem.nLanes)
     return problem

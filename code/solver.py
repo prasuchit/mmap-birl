@@ -12,11 +12,32 @@ def policyIteration(mdp):
     SHOW_MSG = False
     nS = mdp.nStates
     nA = mdp.nActions
-    pi = mdptoolbox.mdp.PolicyIterationModified(mdp.transition.T, mdp.reward, mdp.discount, max_iter=MAX_ITERS, epsilon=EPS)
+    pi = mdptoolbox.mdp.PolicyIterationModified(np.transpose(mdp.transition), mdp.reward, mdp.discount, max_iter=MAX_ITERS, epsilon=EPS)
     pi.run()
     Q = utils.QfromV(pi.V, mdp)
     piL = np.reshape(pi.policy, (nS, 1))
     H = evaluate(piL, mdp)
+
+    # oldpi = np.zeros((nS, 1)).astype(int)
+    # oldV = np.zeros((nS, 1)).astype(int)
+
+    # for iter in range(MAX_ITERS):
+    #     [V, H] = evaluate(oldpi, mdp)
+    #     Q = utils.QfromV(V, mdp)
+    #     piL = np.reshape(np.argmax(Q, axis=1), (nS, 1)) # Sec 2.2 Theorem 2 Eq 3 Algo for IRL
+    #     V = np.zeros((nS, 1))
+    #     for i in range(nS):
+    #         V[i, :] = Q[i, piL[i, :]]
+    #     done = utils.approxeq(V, oldV, EPS) or np.array_equal(oldpi, piL)
+
+    #     if done:
+    #         break
+    #     oldpi = piL
+    #     oldV = V
+    # return piL, V, Q, H
+
+    # print("Leaving policy iteration")
+
     return piL, pi.V, Q, H
 
 
@@ -38,4 +59,6 @@ def evaluate(piL, mdp):
         Epi[i, act_ind[i]] = 1
 
     H = np.linalg.lstsq(I - mdp.discount * Tpi, np.matmul(Epi, mdp.F))[0] 
+    # V = np.matmul(H, w)
+    # return V, H
     return H

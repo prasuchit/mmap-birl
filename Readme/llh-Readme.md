@@ -15,4 +15,4 @@ is obtained and added to the negative log likelihood to get the posterior and th
 [3](https://www.aaai.org/ocs/index.php/IJCAI/IJCAI13/paper/viewPaper/6572), 
 [4](https://papers.nips.cc/paper/4737-nonparametric-bayesian-inverse-reinforcement-learning-for-multiple-reward-functions),
 [5](https://arxiv.org/abs/1206.5264),
-[6](https://papers.nips.cc/paper/4479-map-inference-for-bayesian-inverse-reinforcement-learning-supplemental.zip);
+[6](https://papers.nips.cc/paper/4479-map-inference-for-bayesian-inverse-reinforcement-learning-supplemental.zip)
