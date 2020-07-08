@@ -31,7 +31,7 @@ class trajInfo:
         self.featExp = None
         self.cnt = None
         self.occlusions = None
-
+        self.allOccNxtSts = None
 
 class irlOptions:
     def __init__(self):

@@ -22,8 +22,8 @@ def main():
     algoName = 'MMAP_BIRL'
     llhName = 'BIRL'
     priorName = 'Gaussian'
-    # probName = 'highway'
-    probName = 'gridworld'
+    probName = 'highway'
+    # probName = 'gridworld'
     nTrajs = 5
     nSteps = 10
     problemSeed = 1
@@ -139,19 +139,19 @@ def main():
             else:
                 opts.restart = 0
 
-        print("Same number of actions between expert and learned pi: ",(piL.squeeze()==piE.squeeze()).sum(),"/",mdp.nStates)
         # print("Expert's Policy: \n",piInterpretation(expertPolicy.squeeze()))
         # print("Learned Policy: \n",piInterpretation(learnedPolicy.squeeze()))
         # print("Sampled weights: \n", w0)
         print("Learned weights: \n", wL)
         t1 = time.time()
         runtime = t1 - t0
+        print("Same number of actions between expert and learned pi: ",(piL.squeeze()==piE.squeeze()).sum(),"/",mdp.nStates)
         print("Time taken: ", runtime," seconds")
+        print(f"Reward Diff: {rewardDiff}| Value Diff: {valueDiff.squeeze()}| Policy Diff: {policyDiff}")
 
     else:
         print("Please check your input!")
 
-    print(f"Reward Diff: {rewardDiff}| Value Diff: {valueDiff.squeeze()}| Policy Diff: {policyDiff}")
 ###########################################################################################
 
 def computeOptmRegn(mdp, w):

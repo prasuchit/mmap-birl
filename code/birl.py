@@ -59,6 +59,8 @@ def MMAP(data, mdp, opts, logging=True):
     rewardDiff = np.linalg.norm(data.weight - wL)
     valueDiff  = abs(vE - vL)
     policyDiff = np.sum(d)/mdp.nStates
+    print("Time taken: ", runtime," seconds")
+    print("Same number of actions between expert and learned pi: ",(piL.squeeze()==piE.squeeze()).sum(),"/",mdp.nStates)
     print("Reward Diff: {}| Value Diff: {}| Policy Diff: {}".format(rewardDiff,valueDiff.squeeze(),policyDiff))
     return wL, logPost, runtime
 
@@ -119,5 +121,7 @@ def MAP(data, mdp, opts, logging=True):
     rewardDiff = np.linalg.norm(data.weight - wL)
     valueDiff  = abs(vE - vL)
     policyDiff = np.sum(d)/mdp.nStates
+    print("Time taken: ", runtime," seconds")
+    print("Same number of actions between expert and learned pi: ",(piL.squeeze()==piE.squeeze()).sum(),"/",mdp.nStates)
     print("Reward Diff: {}| Value Diff: {}| Policy Diff: {}".format(rewardDiff,valueDiff.squeeze(),policyDiff))
     return wL, logPost, runtime

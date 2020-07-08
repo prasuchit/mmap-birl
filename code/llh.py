@@ -13,39 +13,9 @@ np.set_printoptions(threshold=np.inf)
 
 def calcNegMarginalLogPost(w, trajs, mdp, options):
 
-    with Pool(processes = 5) as pool:
-
-        originalInfo = utils.getTrajInfo(trajs, mdp)
-        occs = originalInfo.occlusions
-        llh = 0
-        grad1 = 0
-        mresult = []
-        if(len(occs) > 0):
-            # print("Compute posterior with marginalization...")
-            # start_t = time.time()
-            for o in (range(len(occs))):
-                trajsCopy = copy.copy(trajs)
-                for s in (range(mdp.nStates)):
-                    for a in range(mdp.nActions):
-                        trajsCopy[occs[o,0], occs[o,1], 0] = s
-                        trajsCopy[occs[o,0], occs[o,1], 1] = a
-                        trajInfo = utils.getTrajInfo(trajsCopy, mdp)
-                        mresult.append(pool.apply_async(calcLogLLH, (w, trajInfo, mdp, options)))
-
-            for i in tqdm(range(len(mresult))):
-                mllh, mgrad1 = mresult[i].get()
-                llh += mllh
-                grad1 += mgrad1
-            # end_t = time.time()
-            # span = end_t - start_t
-            # print(span)
-            grad1 = np.reshape(grad1,(mdp.nFeatures,1))
-        else:
-            # print("No occlusions found...")
-            trajsCopy = copy.copy(trajs)
-            trajInfo = utils.getTrajInfo(trajsCopy, mdp)
-            llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
-            grad1 = np.reshape(grad1,(mdp.nFeatures,1))
+    originalInfo = utils.getTrajInfo(trajs, mdp)
+    llh, grad1 = multiProcess(originalInfo, w, trajs, mdp, options)
+    # llh, grad1 = serialProcess(originalInfo, w, trajs, mdp, options)
         
     prior, grad2 = calcLogPrior(w, options)
     grad2 = np.reshape(grad2,(mdp.nFeatures,1))
@@ -66,6 +36,68 @@ def calcNegMarginalLogPost(w, trajs, mdp, options):
         raise SystemExit(0)
     # print("Posterior inside llh: ", post)
     return post, grad
+
+def multiProcess(originalInfo, w, trajs, mdp, options):
+
+    occs = originalInfo.occlusions
+    llh = 0
+    grad1 = 0
+    mresult = []
+    with Pool(processes = 5) as pool:
+        if(len(occs) > 0):
+            # print("Compute posterior with marginalization...")
+            # start_t = time.time()
+            for o in tqdm(range(len(occs))):
+                trajsCopy = copy.copy(trajs)
+                for s in originalInfo.allOccNxtSts[o]:
+                    for a in range(mdp.nActions):
+                        trajsCopy[occs[o,0], occs[o,1], 0] = s
+                        trajsCopy[occs[o,0], occs[o,1], 1] = a
+                        trajInfo = utils.getTrajInfo(trajsCopy, mdp)
+                        mresult.append(pool.apply_async(calcLogLLH, (w, trajInfo, mdp, options)))
+
+            for i in tqdm(range(len(mresult))):
+                mllh, mgrad1 = mresult[i].get()
+                llh += mllh
+                grad1 += mgrad1
+            grad1 = np.reshape(grad1,(mdp.nFeatures,1))
+        else:
+            # print("No occlusions found...")
+            trajsCopy = copy.copy(trajs)
+            trajInfo = utils.getTrajInfo(trajsCopy, mdp)
+            llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
+            grad1 = np.reshape(grad1,(mdp.nFeatures,1))
+
+    return llh, grad1
+
+def serialProcess(originalInfo, w, trajs, mdp, options):
+
+    occs = originalInfo.occlusions
+    llh = 0
+    grad1 = 0
+    mresult = []
+    if(len(occs) > 0):
+        # print("Compute posterior with marginalization...")
+        # start_t = time.time()
+        for o in tqdm(range(len(occs))):
+            trajsCopy = copy.copy(trajs)
+            for s in originalInfo.allOccNxtSts[o]:
+                for a in range(mdp.nActions):
+                    trajsCopy[occs[o,0], occs[o,1], 0] = s
+                    trajsCopy[occs[o,0], occs[o,1], 1] = a
+                    trajInfo = utils.getTrajInfo(trajsCopy, mdp)
+                    mllh, mgrad1 = calcLogLLH(w, trajInfo, mdp, options)
+                    llh += mllh
+                    grad1 += mgrad1
+        grad1 = np.reshape(grad1,(mdp.nFeatures,1))
+    else:
+        # print("No occlusions found...")
+        trajsCopy = copy.copy(trajs)
+        trajInfo = utils.getTrajInfo(trajsCopy, mdp)
+        llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
+        grad1 = np.reshape(grad1,(mdp.nFeatures,1))
+
+    return llh, grad1
 
 def calcNegLogPost(w, trajInfo, mdp, options):
     llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
