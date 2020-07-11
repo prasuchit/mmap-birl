@@ -47,7 +47,7 @@ def generateDemonstration(mdp, problem, numOccs=0):
             try:
                 occlusions = np.zeros(data.nSteps)
                 # occlusions[random.sample(range(problem.nSteps), numOccs)] = -1
-                occlusions[1 + np.arange(int(data.nSteps/5))] = -1
+                occlusions[1 + np.arange(int(data.nSteps/2))] = -1
             except ValueError:
                 print("ERROR: Number of occlusions exceed total number of steps. Exiting!")
                 raise SystemExit(0)
@@ -70,7 +70,7 @@ def generateTrajectory(mdp, problem):
         print('  - assign weight to the problem')
         print(w)
     if problem.name == 'gridworld':
-        policy, value, _, _ = solver.policyIteration(mdp)
+        policy, value, _, _ = solver.piMDPToolbox(mdp)
         optValue = np.matmul(np.transpose(mdp.start), value)
         print(' - Optimal value : %.4f' % (optValue))
         trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
@@ -79,7 +79,7 @@ def generateTrajectory(mdp, problem):
     elif problem.name == 'highway':
         print(f'solve {mdp.name}\n')
         tic = time.time()  
-        policy, value, _ , H = solver.policyIteration(mdp)
+        policy, value, _ , H = solver.piMDPToolbox(mdp)
         toc = time.time()
         elapsedTime = toc - tic
         # featOcc = full(H.T*mdp.start)

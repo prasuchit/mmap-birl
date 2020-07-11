@@ -22,8 +22,8 @@ def main():
     algoName = 'MMAP_BIRL'
     llhName = 'BIRL'
     priorName = 'Gaussian'
-    probName = 'highway'
-    # probName = 'gridworld'
+    # probName = 'highway'
+    probName = 'gridworld'
     nTrajs = 5
     nSteps = 10
     problemSeed = 1
@@ -32,7 +32,7 @@ def main():
     init_nLanes = 3     # For highway problem
     init_nSpeeds = 2    # For highway problem
     init_noise = 0.3
-    numOcclusions = 1
+    numOcclusions = 0
     MaxIter = 100
     sigma = 1/MaxIter
     alpha = 1   # learning rate
@@ -110,11 +110,11 @@ def main():
             wL = (currWeight-min(currWeight))/(max(currWeight)-min(currWeight))
 
             mdp = utils.convertW2R(data.weight, mdp)
-            piE, VE, QE, HE = solver.policyIteration(mdp)
+            piE, VE, QE, HE = solver.piMDPToolbox(mdp)
             vE = np.matmul(np.matmul(data.weight.T,HE.T),mdp.start)
 
             mdp = utils.convertW2R(wL, mdp)
-            piL, VL, QL, HL = solver.policyIteration(mdp)
+            piL, VL, QL, HL = solver.piMDPToolbox(mdp)
             vL = np.matmul(np.matmul(wL.T,HL.T),mdp.start)
 
             d  = np.zeros((mdp.nStates, 1))
@@ -156,7 +156,7 @@ def main():
 
 def computeOptmRegn(mdp, w):
     mdp = utils.convertW2R(w, mdp)
-    piL, _, _, H = solver.policyIteration(mdp)
+    piL, _, _, H = solver.piMDPToolbox(mdp)
     return piL, H
 
 def reuseCacheGrad(w, cache):
