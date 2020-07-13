@@ -55,7 +55,9 @@ def MMAP(data, mdp, opts, logging=True):
         else:
             d[s] = 1
 
-    wL = (wL-min(wL))/(max(wL)-min(wL))
+    wL = (np.exp(currWeight))/(np.sum(np.exp(currWeight))) # Softmax normalization
+    # wL = (currWeight-min(currWeight))/(max(currWeight)-min(currWeight)) # Normalizing b/w 0-1
+    # wL = currWeight # Unnormalized raw weights
     rewardDiff = np.linalg.norm(data.weight - wL)
     valueDiff  = abs(vE - vL)
     policyDiff = np.sum(d)/mdp.nStates

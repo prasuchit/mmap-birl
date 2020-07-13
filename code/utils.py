@@ -27,25 +27,28 @@ def sampleWeight(problem, nF, seed=None):
     
     np.random.seed(seed)
     w = np.zeros((nF, 1))
-    # i = np.random.randint(0,5)
-    i = 0
+    i = 1   # behavior setter
     if problem.name == 'gridworld':
-        w = np.random.rand(nF, 1)
-        # w = np.reshape(np.array([0.0330629367818319 , 0.768547209424092, 0.744437334981885, 0.574890390524460,
-        #                         0.984201187783809, 0.885444972761834, 0.408018314905920, 0.177146367482004,
-        #                         0.786364648105583, 0.519307375776462, 0.468017528895639, 0.955954804969700,
-        #                         0.113075768967593, 0.482051172582913, 0.643050110155323, 0.975467398811565]), (nF,1))
+        if i == 0:  # Random behaviour
+            w = np.random.rand(nF, 1)
+        else:   # Reaching last state is most preferred
+            w[:] = -0.1
+            w[-1] = 1
+            # w = np.reshape(np.array([[0.        ],  [0.58778302], [0.78240758],  [1.        ]]), (nF,1))
     elif problem.name == 'highway':
+        # weights are assigned 1 for collision, n for nlanes, n for nspeeds
         if i == 1:              # fast driver avoids collisions and prefers high speed
-            w[:] = 0.01
-            w[0]   = 0         # collision
-            w[-1] = 0.5         # high-speed
+            w[:] = -0.01
+            w[0] = -0.1        # collision
+            w[-1] = 1.0         # high-speed
+            # w = np.reshape(np.array([0, 0.68729169, 0.6719028,  0.74564387, 0.44982682, 1.]), (nF,1))
+            # w = np.reshape(np.array([[6.38479103e-13], [6.48058560e-26], [1.79305356e-12], [1.22686726e-02], [1.29747809e-26], [9.87731327e-01]]), (nF,1))
         elif i == 2:            # safe driver avoids collisions and prefers right-most lane
-            w[:] = 0.01
-            w[0] = 0           # collision
+            w[:] = -0.01
+            w[0] = -0.1           # collision
             w[problem.nLanes] = 0.5 # right-most lane
         elif i == 3:            # erratic driver prefers collisions and high-speed
-            w[:] = 0.01
+            w[:] = -0.01
             w[0] = 1            # collision
             w[-1] = 0.5         # high-speed
         else:
