@@ -22,8 +22,8 @@ def main():
     algoName = 'MMAP_BIRL'
     llhName = 'BIRL'
     priorName = 'Gaussian'
-    probName = 'highway'
-    # probName = 'gridworld'
+    # probName = 'highway'
+    probName = 'gridworld'
     nTrajs = 5
     nSteps = 10
     problemSeed = 1

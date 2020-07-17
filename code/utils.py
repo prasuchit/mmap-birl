@@ -28,7 +28,7 @@ def sampleWeight(problem, nF, seed=None):
     np.random.seed(seed)
     w = np.zeros((nF, 1))
     # i = np.random.randint(0,5)
-    i = 0
+    i = 1
     if problem.name == 'gridworld':
         w = np.random.rand(nF, 1)
         # w = np.reshape(np.array([0.0330629367818319 , 0.768547209424092, 0.744437334981885, 0.574890390524460,
@@ -37,17 +37,14 @@ def sampleWeight(problem, nF, seed=None):
         #                         0.113075768967593, 0.482051172582913, 0.643050110155323, 0.975467398811565]), (nF,1))
     elif problem.name == 'highway':
         if i == 1:              # fast driver avoids collisions and prefers high speed
-            w[:] = 0.01
-            w[0]   = 0         # collision
-            w[-1] = 0.5         # high-speed
+            w[0]  = -1         # collision
+            w[-1] = 0.1         # high-speed
         elif i == 2:            # safe driver avoids collisions and prefers right-most lane
-            w[:] = 0.01
-            w[0] = 0           # collision
-            w[problem.nLanes] = 0.5 # right-most lane
+            w[0] = -1           # collision
+            w[problem.nLanes] = 0.1 # right-most lane
         elif i == 3:            # erratic driver prefers collisions and high-speed
-            w[:] = 0.01
             w[0] = 1            # collision
-            w[-1] = 0.5         # high-speed
+            w[-1] = 0.1         # high-speed
         else:
             w = np.random.rand(nF, 1)
 
@@ -142,9 +139,9 @@ def processOccl(trajs, nS, nA, nTrajs, nSteps, transition):
             else:
                 cnt[s, a] += 1
     '''
-    # We attempt to find the possible states these occlusions could be
-    # using the reachable states of the state before the occluded step in the traj.
+    # We use forward-backward search logic to find the reachable states from the state before the occluded step in the traj.
     # Similarly, we can use the state after the occl(s) to find which states could reach that state.
+    # We can go all the way backwards till the first occl in that series, but that's not implemented yet.
     '''
     allOccNxtSts = []   # Each sublist within (have next states) corresponds to that index in occlusions.
     for o in occlusions:
@@ -186,6 +183,15 @@ def processOccl(trajs, nS, nA, nTrajs, nSteps, transition):
                                     if transition[trajs[o[0], o[1] + 1,0], i, act] != 0:  # Does any action from this state land me in that next state?
                                         if i not in nxtStates:  # If we don't already have that next state in the list
                                             nxtStates.append(i)
+                                """ BACKWARD PASS psuedo code:
+                                j = 1
+                                while -1 in trajs[o[0], o[1] - j,:]:
+                                    for someState in allOccNxtSts[occlusions.index(o) - j]:
+                                        for a in range(nA):     # And all actions
+                                            if transition[someState, allOccNxtSts[occlusions.index(o)], a] == 0:
+                                                allOccNxtSts[occlusions.index(o) - j].remove(someState)
+                                    j += 1
+                                    """
                             else:   # If step after occl isn't within nSteps and/or is also occluded
                                 if i not in nxtStates:  # If we don't already have that next state in the list
                                     nxtStates.append(i)
