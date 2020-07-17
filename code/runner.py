@@ -9,6 +9,7 @@ import copy
 import solver
 import time
 from scipy.optimize._minimize import minimize
+from scipy.special._logsumexp import logsumexp
 from tqdm.gui import tqdm
 np.seterr(divide='ignore', invalid='ignore')
 
@@ -18,21 +19,22 @@ def main():
     # choice = input("Enter the method for optimization: scipy or manual\n")
     choice = 'manual'
     # choice = 'scipy'
-    # algoName = 'MAP_BIRL'
-    algoName = 'MMAP_BIRL'
+    algoName = 'MAP_BIRL'
+    # algoName = 'MMAP_BIRL'
     llhName = 'BIRL'
     priorName = 'Gaussian'
-    # probName = 'highway'
-    probName = 'gridworld'
+    # priorName = 'Uniform'
+    probName = 'highway'
+    # probName = 'gridworld'
     nTrajs = 5
     nSteps = 10
     problemSeed = 1
     init_gridSize = 4
-    init_blockSize = 2
+    init_blockSize = 1
     init_nLanes = 3     # For highway problem
     init_nSpeeds = 2    # For highway problem
     init_noise = 0.3
-    numOcclusions = 1
+    numOcclusions = 0
     MaxIter = 100
     sigma = 1/MaxIter
     alpha = 1   # learning rate
@@ -107,14 +109,15 @@ def main():
                     print("  Found reusable gradient ")
                     currGrad = opti[2]
 
-            wL = (currWeight-min(currWeight))/(max(currWeight)-min(currWeight))
-
+            wL = (np.exp(currWeight))/(np.sum(np.exp(currWeight))) # Softmax normalization
+            # wL = (currWeight-min(currWeight))/(max(currWeight)-min(currWeight)) # Normalizing b/w 0-1
+            # wL = currWeight # Unnormalized raw weights
             mdp = utils.convertW2R(data.weight, mdp)
-            piE, VE, QE, HE = solver.policyIteration(mdp)
+            piE, VE, QE, HE = solver.piMDPToolbox(mdp)
             vE = np.matmul(np.matmul(data.weight.T,HE.T),mdp.start)
 
             mdp = utils.convertW2R(wL, mdp)
-            piL, VL, QL, HL = solver.policyIteration(mdp)
+            piL, VL, QL, HL = solver.piMDPToolbox(mdp)
             vL = np.matmul(np.matmul(wL.T,HL.T),mdp.start)
 
             d  = np.zeros((mdp.nStates, 1))
@@ -130,7 +133,8 @@ def main():
             valueDiff  = abs(vE - vL)
             policyDiff = np.sum(d)/mdp.nStates
 
-            if(policyDiff > 0.15 or rewardDiff > 1.5):
+            # if(policyDiff > 0.15 or rewardDiff > 1.5):
+            if(policyDiff > 0.15):
                 print(f"Rerunning for better results! Policy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
                 opts.restart += 1
                 if(opts.restart > 5):
@@ -156,7 +160,7 @@ def main():
 
 def computeOptmRegn(mdp, w):
     mdp = utils.convertW2R(w, mdp)
-    piL, _, _, H = solver.policyIteration(mdp)
+    piL, _, _, H = solver.piMDPToolbox(mdp)
     return piL, H
 
 def reuseCacheGrad(w, cache):

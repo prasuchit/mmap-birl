@@ -14,13 +14,13 @@ import scipy.io as sio
 
 def init(nGrids, nSpeeds, nLanes, discount, bprint):
 
-    appearanceProb = np.array([0.4, 0.6, 0.8])  # prob. of other car appearing on each lane
+    appearanceProb = np.array(np.linspace(0.1,1,num=nLanes, endpoint=False))  # prob. of other car appearing on each lane
     succProb = np.reshape(np.array([0.8, 0.4, 1.0, 0.8]), (2,2))    # prob of successfully moving in intended way
     carSize  = 2
     nS       = int(nSpeeds*nLanes*m.pow(nGrids,nLanes))
 
     nA = 5                   # nop, move left, move right, speed up, speed down
-    nF = 1 + nLanes + nSpeeds  # collision, lanes, speeds
+    nF = (1 + nLanes + nSpeeds)    # collision, lanes, speeds
     T  = np.zeros((nS, nS, nA))    # state transition probability
     F  = np.zeros((nS, nF))         # state feature
 

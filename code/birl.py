@@ -39,11 +39,11 @@ def MMAP(data, mdp, opts, logging=True):
     logPost = res.fun
 
     mdp = utils.convertW2R(data.weight, mdp)
-    piE, VE, QE, HE = solver.policyIteration(mdp)
+    piE, VE, QE, HE = solver.piMDPToolbox(mdp)
     vE = np.matmul(np.matmul(data.weight.T,HE.T),mdp.start)
 
     mdp = utils.convertW2R(wL, mdp)
-    piL, VL, QL, HL = solver.policyIteration(mdp)
+    piL, VL, QL, HL = solver.piMDPToolbox(mdp)
     vL = np.matmul(np.matmul(wL.T,HL.T),mdp.start)
 
     d  = np.zeros((mdp.nStates, 1))
@@ -55,7 +55,9 @@ def MMAP(data, mdp, opts, logging=True):
         else:
             d[s] = 1
 
-    wL = (wL-min(wL))/(max(wL)-min(wL))
+    wL = (np.exp(currWeight))/(np.sum(np.exp(currWeight))) # Softmax normalization
+    # wL = (currWeight-min(currWeight))/(max(currWeight)-min(currWeight)) # Normalizing b/w 0-1
+    # wL = currWeight # Unnormalized raw weights
     rewardDiff = np.linalg.norm(data.weight - wL)
     valueDiff  = abs(vE - vL)
     policyDiff = np.sum(d)/mdp.nStates
@@ -101,11 +103,11 @@ def MAP(data, mdp, opts, logging=True):
         # print(w0)
         mdp = utils.convertW2R(data.weight, mdp)
 
-    piE, VE, QE, HE = solver.policyIteration(mdp)
+    piE, VE, QE, HE = solver.piMDPToolbox(mdp)
     vE = np.matmul(np.matmul(data.weight.T,HE.T),mdp.start)
 
     mdp = utils.convertW2R(wL, mdp)
-    piL, VL, QL, HL = solver.policyIteration(mdp)
+    piL, VL, QL, HL = solver.piMDPToolbox(mdp)
     vL = np.matmul(np.matmul(wL.T,HL.T),mdp.start)
 
     d  = np.zeros((mdp.nStates, 1))
