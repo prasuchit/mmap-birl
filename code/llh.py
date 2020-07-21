@@ -13,9 +13,9 @@ np.set_printoptions(threshold=np.inf)
 
 def calcNegMarginalLogPost(w, trajs, mdp, options):
 
-    originalInfo = utils.getTrajInfo(trajs, mdp)
-    # llh, grad1 = multiProcess(originalInfo, w, trajs, mdp, options)
-    llh, grad1 = serialProcess(originalInfo, w, trajs, mdp, options)
+    originalInfo = utils.getOrigTrajInfo(trajs, mdp)
+    llh, grad1 = multiProcess(originalInfo, w, trajs, mdp, options)
+    # llh, grad1 = serialProcess(originalInfo, w, trajs, mdp, options)
         
     prior, grad2 = calcLogPrior(w, options)
     grad2 = np.reshape(grad2,(mdp.nFeatures,1))

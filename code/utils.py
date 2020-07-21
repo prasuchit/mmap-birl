@@ -2,6 +2,7 @@ import numpy as np
 import math
 import options
 import numpy.matlib
+import time
 from operator import mod
 np.seterr(divide='ignore', invalid='ignore')
 
@@ -27,7 +28,7 @@ def sampleWeight(problem, nF, seed=None):
     
     np.random.seed(seed)
     w = np.zeros((nF, 1))
-    i = 1   # behavior setter
+    i = 0   # behavior setter
     if problem.name == 'gridworld':
         if i == 0:  # Random behaviour
             w = np.random.rand(nF, 1)
@@ -109,7 +110,9 @@ def find(arr, func):
     else:
         return np.array(l).astype(int)
 
-def getTrajInfo(trajs, mdp):
+
+    
+def getOrigTrajInfo(trajs, mdp):
     nS = mdp.nStates
     nA = mdp.nActions
 
@@ -136,19 +139,23 @@ def processOccl(trajs, nS, nA, nTrajs, nSteps, transition):
 
     occlusions = []    
     cnt = np.zeros((nS, nA))
+    # occlPerTraj = [0]*nTrajs
     for m in range(nTrajs):
         for h in range(nSteps):
             s = trajs[m, h, 0]
             a = trajs[m, h, 1]
             if -1 in trajs[m, h, :]:
                occlusions.append([m,h])
+            #    occlPerTraj[m] += 1
             else:
                 cnt[s, a] += 1
     '''
-    # We use forward-backward search logic to find the reachable states from the state before the occluded step in the traj.
-    # Similarly, we can use the state after the occl(s) to find which states could reach that state.
-    # We can go all the way backwards till the first occl in that series, but that's not implemented yet.
+    # We use bidirectional search logic to find the reachable states from the state before the occluded step in the traj.
+    # Similarly, we can use the state after the occl(s).
     '''
+    startPass = time.time()
+    ''' Forward Pass '''
+
     allOccNxtSts = []   # Each sublist within (have next states) corresponds to that index in occlusions.
     for o in occlusions:
 
@@ -189,15 +196,7 @@ def processOccl(trajs, nS, nA, nTrajs, nSteps, transition):
                                     if transition[trajs[o[0], o[1] + 1,0], i, act] != 0:  # Does any action from this state land me in that next state?
                                         if i not in nxtStates:  # If we don't already have that next state in the list
                                             nxtStates.append(i)
-                                """ BACKWARD PASS psuedo code:
-                                j = 1
-                                while -1 in trajs[o[0], o[1] - j,:]:
-                                    for someState in allOccNxtSts[occlusions.index(o) - j]:
-                                        for a in range(nA):     # And all actions
-                                            if transition[someState, allOccNxtSts[occlusions.index(o)], a] == 0:
-                                                allOccNxtSts[occlusions.index(o) - j].remove(someState)
-                                    j += 1
-                                    """
+                                   
                             else:   # If step after occl isn't within nSteps and/or is also occluded
                                 if i not in nxtStates:  # If we don't already have that next state in the list
                                     nxtStates.append(i)
@@ -206,8 +205,56 @@ def processOccl(trajs, nS, nA, nTrajs, nSteps, transition):
         else:    # If none of these conditions match
             allOccNxtSts.append([i for i in range(nS)]) # Current state is all possible states we have.
 
+    ''' Backward pass '''
+    for m in range(nTrajs):
+        for h in range(nSteps):
+            if -1 in trajs[m,h,:] and -1 not in trajs[m,h+1,:]:
+                tempList = []
+                p = h
+                while(-1 in trajs[m,p,:] and -1 in trajs[m,p-1,:]):
+                    occIndex = occlusions.index([m,p])
+                    for s in allOccNxtSts[occIndex]:
+                        for i in range(nS): # For all next states
+                            for a in range(nA):     # And all actions
+                                if transition[s, i, a] != 0:    # If transition to a state is possible, that could be our current occluded state
+                                    tempList.append(i)
+                    # print(tempList)
+                    for k in list(allOccNxtSts[occIndex - 1]):  # Iterating over a copy of the list to allow
+                                                                # modifications to the original list.
+                        if(k not in tempList):
+                            allOccNxtSts[occIndex - 1].remove(k)
+                    p -= 1
+    endPass = time.time()
+    print("Time taken for bidirectional search: ", endPass - startPass)
+
     return occlusions, cnt , allOccNxtSts 
 
+def getTrajInfo(trajs, mdp):
+    nS = mdp.nStates
+    nA = mdp.nActions
+
+    trajInfo = options.trajInfo()
+    trajInfo.nTrajs = trajs.shape[0]
+    trajInfo.nSteps = trajs.shape[1]  
+    cnt = np.zeros((nS, nA))
+    for m in range(trajInfo.nTrajs):
+        for h in range(trajInfo.nSteps):
+            s = trajs[m, h, 0]
+            a = trajs[m, h, 1]
+            if -1 not in trajs[m, h, :]:
+                cnt[s, a] += 1
+
+    N = np.count_nonzero(cnt)
+    trajInfo.cnt = np.zeros((N, 3)).astype(int)
+    i = 0
+    for s in range(nS):
+        for a in range(nA):
+            if cnt[s, a] > 0:
+                trajInfo.cnt[i, 0] = s
+                trajInfo.cnt[i, 1] = a
+                trajInfo.cnt[i, 2] = cnt[s, a]
+                i += 1
+    return trajInfo
 
 def sampleNewWeight(dims, options, seed=None):
     # np.random.seed(seed)
@@ -215,14 +262,16 @@ def sampleNewWeight(dims, options, seed=None):
     lb = options.lb 
     ub = options.ub    
     if options.priorType == 'Gaussian':
-        # w0 = options.mu + np.random.randn(dims, 1)*options.sigma  # Direct way to do it
-        # for i in range(len(w0)):
-        #     w0[i] = max(lb, min(ub, w0[i])) # Check to ensure weights are within bounds
+        w0 = options.mu + np.random.randn(dims, 1)*options.sigma  # Direct way to do it
+        for i in range(len(w0)):
+            w0[i] = max(lb, min(ub, w0[i])) # Check to ensure weights are within bounds
 
         mean = np.ones(dims) * options.mu
         cov = np.eye(dims) * options.sigma
         w0 = np.clip(np.random.multivariate_normal(mean, cov), a_min=lb, a_max=ub).reshape((dims, 1))
 
+        ''' Good weight(s) for testing 5 traj 10 steps 0 occl nGrid 4 HIGHWAY ''' 
+        # w0 = np.array([[ 1.        ], [-0.01359188], [ 0.38688691], [-0.04321886], [-0.07878083], [-0.85341881]])
         ''' Good weight(s) for testing 5 traj 10 steps 0 occl nGrid 4 nBlock 2 Gridworld ''' 
         # w0 = np.array([[-4.72298204e-01], [-2.39969794e-01], [-5.95197079e-05], [-1.93911446e-01]])
         # w0 = np.array([[-0.45573616], [ 0.53201201], [-0.1572897 ], [-0.52387681]])

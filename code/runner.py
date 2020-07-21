@@ -34,7 +34,7 @@ def main():
     init_nLanes = 3     # For highway problem
     init_nSpeeds = 2    # For highway problem
     init_noise = 0.3
-    numOcclusions = 0
+    numOcclusions = 1
     MaxIter = 100
     sigma = 1/MaxIter
     alpha = 1   # learning rate
