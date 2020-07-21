@@ -208,22 +208,24 @@ def processOccl(trajs, nS, nA, nTrajs, nSteps, transition):
     ''' Backward pass '''
     for m in range(nTrajs):
         for h in range(nSteps):
-            if -1 in trajs[m,h,:] and -1 not in trajs[m,h+1,:]:
-                tempList = []
-                p = h
-                while(-1 in trajs[m,p,:] and -1 in trajs[m,p-1,:]):
-                    occIndex = occlusions.index([m,p])
-                    for s in allOccNxtSts[occIndex]:
-                        for i in range(nS): # For all next states
-                            for a in range(nA):     # And all actions
-                                if transition[s, i, a] != 0:    # If transition to a state is possible, that could be our current occluded state
-                                    tempList.append(i)
-                    # print(tempList)
-                    for k in list(allOccNxtSts[occIndex - 1]):  # Iterating over a copy of the list to allow
-                                                                # modifications to the original list.
-                        if(k not in tempList):
-                            allOccNxtSts[occIndex - 1].remove(k)
-                    p -= 1
+            if -1 in trajs[m,h,:] and h != nSteps - 1:
+                if -1 not in trajs[m,h+1,:]:
+                    tempList = []
+                    p = h
+                    while(-1 in trajs[m,p,:] and -1 in trajs[m,p-1,:]):
+                        occIndex = occlusions.index([m,p])
+                        for s in allOccNxtSts[occIndex]:
+                            for i in range(nS): # For all next states
+                                for a in range(nA):     # And all actions
+                                    if transition[s, i, a] != 0:    # If transition to a state is possible, that could be our current occluded state
+                                        tempList.append(i)
+                        # print(tempList)
+                        for k in list(allOccNxtSts[occIndex - 1]):  # Iterating over a copy of the list to allow
+                                                                    # modifications to the original list.
+                            if(k not in tempList):
+                                allOccNxtSts[occIndex - 1].remove(k)
+                        p -= 1
+            
     endPass = time.time()
     print("Time taken for bidirectional search: ", endPass - startPass)
 

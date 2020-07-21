@@ -46,8 +46,8 @@ def generateDemonstration(mdp, problem, numOccs=0):
         for i in range(problem.nTrajs):
             try:
                 occlusions = np.zeros(data.nSteps)
-                occlusions[random.sample(range(problem.nSteps), numOccs)] = -1
-                # occlusions[1 + np.arange(int(data.nSteps/5))] = -1
+                # occlusions[random.sample(range(problem.nSteps), numOccs)] = -1
+                occlusions[1 + np.arange(int(data.nSteps/5))] = -1
             except ValueError:
                 print("ERROR: Number of occlusions exceed total number of steps. Exiting!")
                 raise SystemExit(0)

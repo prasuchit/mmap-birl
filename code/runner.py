@@ -30,7 +30,7 @@ def main():
     nSteps = 10
     problemSeed = 1
     init_gridSize = 4
-    init_blockSize = 1
+    init_blockSize = 2
     init_nLanes = 3     # For highway problem
     init_nSpeeds = 2    # For highway problem
     init_noise = 0.3
@@ -109,8 +109,8 @@ def main():
                     print("  Found reusable gradient ")
                     currGrad = opti[2]
 
-            wL = (np.exp(currWeight))/(np.sum(np.exp(currWeight))) # Softmax normalization
-            # wL = (currWeight-min(currWeight))/(max(currWeight)-min(currWeight)) # Normalizing b/w 0-1
+            # wL = (np.exp(currWeight))/(np.sum(np.exp(currWeight))) # Softmax normalization
+            wL = (currWeight-min(currWeight))/(max(currWeight)-min(currWeight)) # Normalizing b/w 0-1
             # wL = currWeight # Unnormalized raw weights
             mdp = utils.convertW2R(data.weight, mdp)
             piE, VE, QE, HE = solver.piMDPToolbox(mdp)
@@ -133,8 +133,8 @@ def main():
             valueDiff  = abs(vE - vL)
             policyDiff = np.sum(d)/mdp.nStates
 
-            # if(policyDiff > 0.15 or rewardDiff > 1.5):
-            if(policyDiff > 0.15):
+            if(policyDiff > 0.15 or rewardDiff > 1.5):
+            # if(policyDiff > 0.15):
                 print(f"Rerunning for better results! Policy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
                 opts.restart += 1
                 if(opts.restart > 5):
