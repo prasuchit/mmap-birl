@@ -46,7 +46,13 @@ class irlOptions:
         self.optimizer = None
         self.mu = None
         self.sigma = None
-        self.optiMethod = None
+        self.solverMethod = None
+        self.optimMethod = None
+        self.normMethod = None
+        self.MaxIter = None
+        self.stepsize = None
+        self.alpha = None
+        self.decay = None
 
 class problem:
     def __init__(self):
@@ -63,3 +69,4 @@ class problem:
         self.seed = None
         self.nSpeed = None
         self.nLane = None
+        self.nOccs = None

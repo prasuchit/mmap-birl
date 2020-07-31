@@ -11,7 +11,7 @@ class mdp:
         self.F = None
         self.weight = None
         self.reward = None
-
+        self.nOccs = None
         self.piL = None
         self.VL = None
         self.QL = None

@@ -13,18 +13,16 @@ np.set_printoptions(threshold=np.inf)
 
 def calcNegMarginalLogPost(w, trajs, mdp, options):
 
-    originalInfo = utils.getOrigTrajInfo(trajs, mdp)
-    # llh, grad1 = multiProcess(originalInfo, w, trajs, mdp, options)
-    llh, grad1 = serialProcess(originalInfo, w, trajs, mdp, options)
-        
+    # llh, grad1 = multiProcess(w, trajs, mdp, options)
+    llh, grad1 = serialProcess(w, trajs, mdp, options)
     prior, grad2 = calcLogPrior(w, options)
     grad2 = np.reshape(grad2,(mdp.nFeatures,1))
     grad = grad1 + grad2 
     post = prior + llh
-    if(options.optiMethod == 'scipy'):
+    if(options.solverMethod == 'scipy'):
         grad = -np.reshape(grad, mdp.nFeatures)
         post = -post
-    elif(options.optiMethod == 'manual'):
+    elif(options.solverMethod == 'manual'):
         grad = np.reshape(grad, mdp.nFeatures)
         post = post
     else: 
@@ -34,19 +32,19 @@ def calcNegMarginalLogPost(w, trajs, mdp, options):
     if np.isinf(post) or np.isinf(-post) or np.isnan(post):
         print(f'ERROR: prior: %f, llh:%f, eta:%f, w:%f %f \n', prior, llh, options.eta, np.amin(w), np.amax(w)) 
         raise SystemExit(0)
-    # print("Posterior inside llh: ", post)
     return post, grad
 
-def multiProcess(originalInfo, w, trajs, mdp, options):
+def multiProcess(w, trajs, mdp, options):
 
     occs = originalInfo.occlusions
     llh = 0
     grad1 = 0
     mresult = []
     with Pool(processes = 5) as pool:
-        if(len(occs) > 0):
+        if(mdp.nOccs > 0):
             # print("Compute posterior with marginalization...")
             # start_t = time.time()
+            originalInfo = utils.getOrigTrajInfo(trajs, mdp)
             for o in tqdm(range(len(occs))):
                 trajsCopy = copy.copy(trajs)
                 for s in originalInfo.allOccNxtSts[o]:
@@ -70,13 +68,13 @@ def multiProcess(originalInfo, w, trajs, mdp, options):
 
     return llh, grad1
 
-def serialProcess(originalInfo, w, trajs, mdp, options):
+def serialProcess(w, trajs, mdp, options):
 
-    occs = originalInfo.occlusions
     llh = 0
     grad1 = 0
-    mresult = []
-    if(len(occs) > 0):
+    if(mdp.nOccs > 0):
+        originalInfo = utils.getOrigTrajInfo(trajs, mdp)
+        occs = originalInfo.occlusions
         # print("Compute posterior with marginalization...")
         # start_t = time.time()
         for o in tqdm(range(len(occs))):
@@ -103,9 +101,10 @@ def calcNegLogPost(w, trajInfo, mdp, options):
     llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
     prior, grad2 = calcLogPrior(w, options)
     grad = grad1 + grad2
-    grad = -grad
     post = prior + llh
-    post = -post
+    if(options.solverMethod == 'scipy'):
+        grad = -grad
+        post = -post
 
     if np.isinf(post) or np.isinf(-post):
         print('ERROR: prior: %f, llh: %f, eta: %f, w: %f %f \n', prior, llh, options.eta, np.amin(w), np.amax(w))

@@ -23,7 +23,8 @@ def generateMDP(problem, discount=0.99):
     mdp.T = mdp.transition
     mdp.T = np.reshape(mdp.T, (nS, nS * nA), order='F')
     mdp.T = mdp.discount * np.transpose(mdp.T)
-    mdp.E = I - mdp.T 
+    mdp.E = I - mdp.T
+    mdp.nOccs = problem.nOccs
     return mdp
 
 def generateDemonstration(mdp, problem, numOccs=0):
@@ -47,7 +48,8 @@ def generateDemonstration(mdp, problem, numOccs=0):
             try:
                 occlusions = np.zeros(data.nSteps)
                 # occlusions[random.sample(range(problem.nSteps), numOccs)] = -1
-                occlusions[1 + np.arange(int(data.nSteps/5))] = -1
+                occlusions[1 + np.arange(int(data.nSteps/3))] = -1
+                # occlusions[(data.nSteps - 2) - np.arange(int(data.nSteps/3))] = -1
             except ValueError:
                 print("ERROR: Number of occlusions exceed total number of steps. Exiting!")
                 raise SystemExit(0)

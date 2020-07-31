@@ -2,7 +2,7 @@ import options
 import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
 
-def setIRLParams(alg=None, restart=0, optimizer='Newton-CG', optiMethod= 'scipy', disp=False):   # L-BFGS-B or Newton-CG
+def setIRLParams(alg=None, restart=0, optimizer='Newton-CG', solverMethod= 'scipy', optimMethod = 'nesterovGrad', normMethod = 'softmax', disp=False):   # L-BFGS-B or Newton-CG
     irlOpts = options.irlOptions()
     irlOpts.alg = alg.name
     irlOpts.llhType = alg.llhType 
@@ -12,7 +12,21 @@ def setIRLParams(alg=None, restart=0, optimizer='Newton-CG', optiMethod= 'scipy'
     irlOpts.optimizer = optimizer 
     irlOpts.lb = -1 
     irlOpts.ub = 1 
-    irlOpts.optiMethod = optiMethod
+    irlOpts.solverMethod = solverMethod
+    irlOpts.optimMethod = optimMethod
+    irlOpts.normMethod = normMethod   
+    irlOpts.alpha = 1   # learning rate
+
+    if irlOpts.optimMethod == 'gradDesc':
+        irlOpts.decay = .95
+        irlOpts.MaxIter = 100
+        irlOpts.stepsize = 1/irlOpts.MaxIter
+
+    elif irlOpts.optimMethod == 'nesterovGrad':
+        irlOpts.decay = 0.9
+        irlOpts.MaxIter = 70
+        irlOpts.stepsize = 1/irlOpts.MaxIter
+
     if irlOpts.priorType == 'Gaussian':
         irlOpts.mu = 0.0
         irlOpts.sigma = 0.5
@@ -23,7 +37,7 @@ def setIRLParams(alg=None, restart=0, optimizer='Newton-CG', optiMethod= 'scipy'
 
     return irlOpts
 
-def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, gridSize=12, blockSize=2, nLanes=3, nSpeeds=2, noise=0.3, seed=None):
+def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, nOccs = 0, gridSize=12, blockSize=2, nLanes=3, nSpeeds=2, noise=0.3, seed=None):
     problem = options.problem()
     problem.name = name
     problem.iters = np.arange(iters)
@@ -34,6 +48,7 @@ def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, gridS
     problem.nSteps = nSteps
     problem.initSeed = 1
     problem.seed = seed
+    problem.nOccs = nOccs
 
     if problem.name == 'gridworld':
         problem.gridSize = gridSize

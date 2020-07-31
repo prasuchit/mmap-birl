@@ -4,7 +4,7 @@
 import numpy as np
 import utils
 import models
-# from scipy import full, sparse
+from scipy import full, sparse
 import generator
 import solver
 import copy
@@ -29,11 +29,11 @@ def init(nGrids, nSpeeds, nLanes, discount, bprint):
         spd, myx, Y = utils.sid2info(s, nSpeeds, nLanes, nGrids)
         
         nX = np.zeros((nA, 2))
-        nX[0, :] = [spd, myx]                     # nop
-        nX[1, :] = [spd, max(0, myx - 1)]         # move left 
+        nX[0, :] = [spd, myx]                         # nop
+        nX[1, :] = [spd, max(0, myx - 1)]             # move left 
         nX[2, :] = [spd, min(nLanes - 1, myx + 1)]    # move right
         nX[3, :] = [min(nSpeeds - 1, spd + 1), myx]   # speed up
-        nX[4, :] = [max(0, spd - 1), myx]         # speed down
+        nX[4, :] = [max(0, spd - 1), myx]             # speed down
         idx1 = utils.find(Y, lambda y: y > 0)
         idx2 = utils.find(Y, lambda y: y == 0)
 
@@ -64,7 +64,7 @@ def init(nGrids, nSpeeds, nLanes, discount, bprint):
         p = 1 - np.sum(nY[:, nLanes])
         nY[-1, nLanes] = nY[-1, nLanes] + p
         for a in range(nA):
-            # calculate transition probability
+            # Calculate transition probability
             for i in range(len(nY)):
                 ns = int(utils.info2sid(nX[a, 0], nX[a, 1], nY[i, :], nSpeeds, nLanes, nGrids))
                 if a == 1 or a == 2:
@@ -80,24 +80,24 @@ def init(nGrids, nSpeeds, nLanes, discount, bprint):
                 else:
                     T[ns, s, a] = nY[i, -1]
 
-        # calculate feature
+        # Calculate feature
         f = np.zeros((nF, 1))
         
-        # check collision
+        # Check collision
         if Y[myx] > ((nGrids -1) - carSize*2) and Y[myx] < (nGrids-1):
             f[0] = 1
         f[1 + myx] = 1             # lane
         f[1 + nLanes + spd] = 1    # speed
         F[s, :] = np.transpose(f)
 
-    # check transition probability
+    # Check transition probability
     for a in range(nA):
         for s in range(nS):
             err = abs(sum(T[:, s, a]) - 1)
             if err > 1e-6 or np.any(T) > 1 or np.any(T) < 0:
                 print('ERROR: %d %d %f\n', s, a, np.sum(T[:, s, a]))
 
-    # initial state distribution
+    # Initial state distribution
     start     = np.zeros((nS, 1))
     s0        = utils.info2sid(0, 1,[0]*nLanes, nSpeeds, nLanes, nGrids)
     start[s0] = 1
@@ -135,8 +135,11 @@ def init(nGrids, nSpeeds, nLanes, discount, bprint):
     mdp.transition = T
     mdp.weight = None
     mdp.reward = None
+    mdp.useSparse = 0
 
     # if mdp.useSparse:
+    #     mdp.transitionS = {}
+    #     mdp.rewardS = {}
     #     mdp.F      = sparse.csr_matrix(mdp.F)
     #     mdp.weight = sparse.csr_matrix(mdp.weight)
     #     mdp.start  = sparse.csr_matrix(mdp.start)

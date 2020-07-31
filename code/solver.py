@@ -3,6 +3,7 @@ import numpy as np
 import math
 import utils
 import mdptoolbox
+from scipy import sparse
 np.seterr(divide='ignore', invalid='ignore')
 
 
@@ -69,6 +70,12 @@ def policyIteration(mdp):
             break
         oldpi = piL
         oldV = V
+
+        # if mdp.useSparse:
+        #     oldV = sparse.csr_matrix(mdp.nStates, 1)
+        # else:
+        #     oldV = zeros(mdp.nStates, 1)
+
     return piL, V, Q, H
 
 

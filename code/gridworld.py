@@ -3,6 +3,7 @@ import math
 import numpy as np
 import sys
 import utils
+from scipy import sparse
 
 np.set_printoptions(threshold=sys.maxsize)
 np.seterr(divide='ignore', invalid='ignore')
@@ -53,6 +54,17 @@ def init(gridSize=12, blockSize=2, noise=0.3, discount=0.99):
     mdp.F = np.tile(F, (nA, 1))
     mdp.weight = None
     mdp.reward = None
+    mdp.useSparse = 0
+
+    # if mdp.useSparse:
+    #     mdp.transitionS = {}
+    #     mdp.rewardS = {}
+    #     mdp.F      = sparse.csr_matrix(mdp.F)
+    #     mdp.weight = sparse.csr_matrix(mdp.weight)
+    #     mdp.start  = sparse.csr_matrix(mdp.start) 
+    #     for a in range(mdp.nActions):
+    #         mdp.transitionS[a] = sparse.csr_matrix(mdp.transition[:, :, a])
+    #         mdp.rewardS[a] = sparse.csr_matrix(mdp.reward[:, a])
 
     return mdp
 

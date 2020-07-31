@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import options
+import utils2
 import numpy.matlib
 import time
 from operator import mod
@@ -28,7 +29,7 @@ def sampleWeight(problem, nF, seed=None):
     
     np.random.seed(seed)
     w = np.zeros((nF, 1))
-    i = 0   # behavior setter
+    i = 2   # behavior setter
     if problem.name == 'gridworld':
         if i == 0:  # Random behaviour
             w = np.random.rand(nF, 1)
@@ -42,8 +43,10 @@ def sampleWeight(problem, nF, seed=None):
             w[:] = -0.01
             w[0] = -0.1        # collision
             w[-1] = 1.0         # high-speed
+            ''' Below are equivalent unique weights to the above weights '''
             # w = np.reshape(np.array([0, 0.68729169, 0.6719028,  0.74564387, 0.44982682, 1.]), (nF,1))
             # w = np.reshape(np.array([[6.38479103e-13], [6.48058560e-26], [1.79305356e-12], [1.22686726e-02], [1.29747809e-26], [9.87731327e-01]]), (nF,1))
+            # w = np.reshape(np.array([0.04364177, 0.14840312, 0.18681807, 0.21468357, 0.109732, 0.29672148]), (nF,1))
         elif i == 2:            # safe driver avoids collisions and prefers right-most lane
             w[:] = -0.01
             w[0] = -0.1           # collision
@@ -110,8 +113,6 @@ def find(arr, func):
     else:
         return np.array(l).astype(int)
 
-
-    
 def getOrigTrajInfo(trajs, mdp):
     nS = mdp.nStates
     nA = mdp.nActions
@@ -119,7 +120,7 @@ def getOrigTrajInfo(trajs, mdp):
     trajInfo = options.trajInfo()
     trajInfo.nTrajs = trajs.shape[0]
     trajInfo.nSteps = trajs.shape[1]
-    occlusions, cnt, allOccNxtSts = processOccl(trajs, nS, nA, trajInfo.nTrajs, trajInfo.nSteps, mdp.transition)
+    occlusions, cnt, allOccNxtSts = utils2.processOccl(trajs, nS, nA, trajInfo.nTrajs, trajInfo.nSteps, mdp.transition)
    
     trajInfo.occlusions = np.array(occlusions)
     trajInfo.allOccNxtSts = np.array(allOccNxtSts)
@@ -134,102 +135,6 @@ def getOrigTrajInfo(trajs, mdp):
                 trajInfo.cnt[i, 2] = cnt[s, a]
                 i += 1
     return trajInfo
-
-def processOccl(trajs, nS, nA, nTrajs, nSteps, transition):
-
-    occlusions = []    
-    cnt = np.zeros((nS, nA))
-    # occlPerTraj = [0]*nTrajs
-    for m in range(nTrajs):
-        for h in range(nSteps):
-            s = trajs[m, h, 0]
-            a = trajs[m, h, 1]
-            if -1 in trajs[m, h, :]:
-               occlusions.append([m,h])
-            #    occlPerTraj[m] += 1
-            else:
-                cnt[s, a] += 1
-    '''
-    # We use bidirectional search logic to find the reachable states from the state before the occluded step in the traj.
-    # Similarly, we can use the state after the occl(s).
-    '''
-    startPass = time.time()
-    ''' Forward Pass '''
-
-    allOccNxtSts = []   # Each sublist within (have next states) corresponds to that index in occlusions.
-    for o in occlusions:
-
-        nxtStates = []  # This is to create a list for each occl to hold its possible states.
-
-        if(o[1] - 1 == -1): # If prev index to this occl step is not within 0th step. Meaning that the occl is at 0th step.
-            if(o[1] + 1 < nSteps and -1 not in trajs[o[0], o[1] + 1,:]):    # Check if next step is within nSteps and isn't occluded
-                for i in range(nS):     # For all current states
-                    for a in range(nA): # And all actions
-                        if transition[trajs[o[0], o[1] + 1,0], i, a] != 0:  # Which of these current states land me in that next state in the traj?
-                            if i not in nxtStates:  # If we don't already have that next state in the list
-                                nxtStates.append(i)
-                allOccNxtSts.append(nxtStates)
-            else:    # If the next step is not within nSteps and/or the next step is also occluded
-                allOccNxtSts.append([i for i in range(nS)]) # Current state is all possible states we have.
-
-        elif(o[1] - 1 != -1 and -1 not in trajs[o[0], o[1] - 1,:]): # If occl is not at 0th step and prev step to occl is unoccluded.
-            for i in range(nS):     # For all next states
-                if transition[i, trajs[o[0], o[1] - 1, 0], trajs[o[0], o[1] - 1, 1]] != 0:  # If transition from that prev state in traj to this next
-                                                                                            # state is probable for the action performed there
-                    if(o[1] + 1 < nSteps and -1 not in trajs[o[0], o[1] + 1,:]):    # If step after occl is within nSteps and unoccluded
-                        for a in range(nA):     # For all possible actions
-                            if transition[trajs[o[0], o[1] + 1,0], i, a] != 0:  # Does this potential state behind the occl land me in that next state?
-                                if i not in nxtStates:  # If we don't already have that next state in the list
-                                    nxtStates.append(i)
-                    else:   # If step after occl isn't within nSteps and/or is also occluded
-                        if i not in nxtStates:  # If we don't already have that next state in the list
-                            nxtStates.append(i)
-            allOccNxtSts.append(nxtStates)
-
-        elif(o[1] - 1 != -1 and -1 in trajs[o[0], o[1] - 1,:]): # If occl is not at 0th step and prev step to occl is also occluded.
-            for i in range(nS): # For all next states
-                for s in allOccNxtSts[occlusions.index(o) -1]:  # From all possible states for prev occluded step
-                    for a in range(nA):     # And all actions
-                        if transition[i, s, a] != 0:    # If transition to a state is possible, that could be our current occluded state
-                            if(o[1] + 1 < nSteps and -1 not in trajs[o[0], o[1] + 1,:]):    # If step after occl is within nSteps and unoccluded
-                                for act in range(nA):     # And all actions
-                                    if transition[trajs[o[0], o[1] + 1,0], i, act] != 0:  # Does any action from this state land me in that next state?
-                                        if i not in nxtStates:  # If we don't already have that next state in the list
-                                            nxtStates.append(i)
-                                   
-                            else:   # If step after occl isn't within nSteps and/or is also occluded
-                                if i not in nxtStates:  # If we don't already have that next state in the list
-                                    nxtStates.append(i)
-            allOccNxtSts.append(nxtStates)
-        
-        else:    # If none of these conditions match
-            allOccNxtSts.append([i for i in range(nS)]) # Current state is all possible states we have.
-
-    ''' Backward pass '''
-    for m in range(nTrajs):
-        for h in range(nSteps):
-            if -1 in trajs[m,h,:] and h != nSteps - 1:
-                if -1 not in trajs[m,h+1,:]:
-                    tempList = []
-                    p = h
-                    while(-1 in trajs[m,p,:] and -1 in trajs[m,p-1,:]):
-                        occIndex = occlusions.index([m,p])
-                        for s in allOccNxtSts[occIndex]:
-                            for i in range(nS): # For all next states
-                                for a in range(nA):     # And all actions
-                                    if transition[s, i, a] != 0:    # If transition to a state is possible, that could be our current occluded state
-                                        tempList.append(i)
-                        # print(tempList)
-                        for k in list(allOccNxtSts[occIndex - 1]):  # Iterating over a copy of the list to allow
-                                                                    # modifications to the original list.
-                            if(k not in tempList):
-                                allOccNxtSts[occIndex - 1].remove(k)
-                        p -= 1
-            
-    endPass = time.time()
-    print("Time taken for bidirectional search: ", endPass - startPass)
-
-    return occlusions, cnt , allOccNxtSts 
 
 def getTrajInfo(trajs, mdp):
     nS = mdp.nStates

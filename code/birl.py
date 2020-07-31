@@ -29,41 +29,18 @@ def MMAP(data, mdp, opts, logging=True):
         return
 
     w0 = utils.sampleNewWeight(mdp.nFeatures, opts, data.seed)
-    # w0 = data.weight
-    # initPost, _ = llh.calcNegMarginalLogPost(w0, trajs, mdp, opts)
     t0 = time.time()
-    res = minimize(llh.calcNegMarginalLogPost, w0, args=(trajs, mdp, opts), method=opts.optimizer, jac=True, options={'disp': opts.showMsg})
+    res = minimize(llh.calcNegMarginalLogPost, w0, args=(trajs, mdp, opts), tol=1e-8, method=opts.optimizer, jac=True, options={'maxiter': 200, 'disp': opts.showMsg})
     t1 = time.time()
     runtime = t1 - t0
     wL = res.x
     logPost = res.fun
-
-    mdp = utils.convertW2R(data.weight, mdp)
-    piE, VE, QE, HE = solver.piMDPToolbox(mdp)
-    vE = np.matmul(np.matmul(data.weight.T,HE.T),mdp.start)
-
-    mdp = utils.convertW2R(wL, mdp)
-    piL, VL, QL, HL = solver.piMDPToolbox(mdp)
-    vL = np.matmul(np.matmul(wL.T,HL.T),mdp.start)
-
-    d  = np.zeros((mdp.nStates, 1))
-    for s in range(mdp.nStates):
-        ixE = QE[s, :] == max(QE[s, :])
-        ixL = QL[s, :] == max(QL[s, :])
-        if ((ixE == ixL).all()):
-            d[s] = 0
-        else:
-            d[s] = 1
-
-    wL = (np.exp(currWeight))/(np.sum(np.exp(currWeight))) # Softmax normalization
-    # wL = (currWeight-min(currWeight))/(max(currWeight)-min(currWeight)) # Normalizing b/w 0-1
-    # wL = currWeight # Unnormalized raw weights
-    rewardDiff = np.linalg.norm(data.weight - wL)
-    valueDiff  = abs(vE - vL)
-    policyDiff = np.sum(d)/mdp.nStates
+    wL = utils2.normalizedW(wL, opts.normMethod)
+    rewardDiff, valueDiff, policyDiff = utils2.computeResults(data, mdp, wL)
     print("Time taken: ", runtime," seconds")
     print("Same number of actions between expert and learned pi: ",(piL.squeeze()==piE.squeeze()).sum(),"/",mdp.nStates)
     print("Reward Diff: {}| Value Diff: {}| Policy Diff: {}".format(rewardDiff,valueDiff.squeeze(),policyDiff))
+    print("Learned weights: \n", wL)
     return wL, logPost, runtime
 
 
@@ -81,9 +58,8 @@ def MAP(data, mdp, opts, logging=True):
         sumLogPost = 0
         for i in tqdm(range(opts.restart)):
             w0 = utils.sampleNewWeight(mdp.nFeatures, opts, data.seed)
-            # initPost, _ = llh.calcNegLogPost(w0, trajInfo, mdp, opts)
             t0 = time.time()
-            res = minimize(llh.calcNegLogPost, w0, args=(trajInfo, mdp, opts), tol=1e-8, method=opts.optimizer, jac=True, options={'disp': opts.showMsg})
+            res = minimize(llh.calcNegLogPost, w0, args=(trajInfo, mdp, opts), tol=1e-8, method=opts.optimizer, jac=True, options={'maxiter': 5, 'disp': opts.showMsg})
             t1 = time.time()
             sumtime += t1 - t0
             wL = res.x
@@ -91,7 +67,7 @@ def MAP(data, mdp, opts, logging=True):
             sumLogPost += logPost
         runtime = sumtime / opts.restart
         logPost = sumLogPost / opts.restart
-        # print(w0)
+        print(res)
     else:
         t0 = time.time()
         res = minimize(llh.calcNegLogPost, w0, args=(trajInfo, mdp, opts), method=opts.optimizer, jac=True, options={'disp': opts.showMsg})
@@ -100,30 +76,11 @@ def MAP(data, mdp, opts, logging=True):
         runtime = t1 - t0
         wL = res.x
         logPost = res.fun
-        # print(w0)
-        mdp = utils.convertW2R(data.weight, mdp)
-
-    piE, VE, QE, HE = solver.piMDPToolbox(mdp)
-    vE = np.matmul(np.matmul(data.weight.T,HE.T),mdp.start)
-
-    mdp = utils.convertW2R(wL, mdp)
-    piL, VL, QL, HL = solver.piMDPToolbox(mdp)
-    vL = np.matmul(np.matmul(wL.T,HL.T),mdp.start)
-
-    d  = np.zeros((mdp.nStates, 1))
-    for s in range(mdp.nStates):
-        ixE = QE[s, :] == max(QE[s, :])
-        ixL = QL[s, :] == max(QL[s, :])
-        if ((ixE == ixL).all()):
-            d[s] = 0
-        else:
-            d[s] = 1
-
-    wL = (wL-min(wL))/(max(wL)-min(wL))
-    rewardDiff = np.linalg.norm(data.weight - wL)
-    valueDiff  = abs(vE - vL)
-    policyDiff = np.sum(d)/mdp.nStates
+        
+    wL = utils2.normalizedW(wL, opts.normMethod)
+    rewardDiff, valueDiff, policyDiff = utils2.computeResults(data, mdp, wL)
     print("Time taken: ", runtime," seconds")
     print("Same number of actions between expert and learned pi: ",(piL.squeeze()==piE.squeeze()).sum(),"/",mdp.nStates)
     print("Reward Diff: {}| Value Diff: {}| Policy Diff: {}".format(rewardDiff,valueDiff.squeeze(),policyDiff))
+    print("Learned weights: \n", wL)
     return wL, logPost, runtime
