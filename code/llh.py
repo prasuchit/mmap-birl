@@ -1,10 +1,12 @@
 import numpy as np
 import utils
+import utils2
 import solver
 import math
 import copy
 from tqdm import tqdm
 from scipy.special._logsumexp import logsumexp
+from scipy import sparse
 from multiprocessing import Pool
 import time
 np.seterr(divide='ignore', invalid='ignore')
@@ -125,14 +127,20 @@ def calcLogPrior(w, options):
 def calcLogLLH(w, trajInfo, mdp, options):
 
     mdp = utils.convertW2R(w, mdp)
-    piL, VL, QL, H = solver.piMDPToolbox(mdp) 
+    if mdp.useSparse:
+        piL, VL, QL, H = solver.policyIteration(mdp)
+    else:
+        piL, VL, QL, H = solver.piMDPToolbox(mdp)
     dQ = calcGradQ(piL, mdp)
     nF = mdp.nFeatures
     nS = mdp.nStates
     nA = mdp.nActions
     eta = options.eta
-    BQ = eta * QL   
-    BQSum = np.reshape(logsumexp(BQ, axis=1),(nS,1))
+    BQ = eta * QL
+    if mdp.useSparse:
+        BQSum = np.reshape(utils2.logsumexp_row_nonzeros(BQ),(nS,1))  
+    else:
+        BQSum = np.reshape(logsumexp(BQ, axis=1),(nS,1))
     NBQ = BQ
     
     NBQ = NBQ - BQSum
@@ -173,9 +181,12 @@ def calcGradQ(piL, mdp):
     Epi = np.zeros((nS, nS * nA)).astype(int)
 
     act_ind = np.reshape(piL * nS + np.arange(0, nS).reshape((nS , 1)), nS)
-    
-    for i in range(nS):
-        Epi[i, act_ind[i]] = 1
+    for s in range(nS):
+        Epi[s, act_ind[s]] = 1
 
-    dQ = np.linalg.lstsq(np.eye(nS * nA) - np.matmul(mdp.T, Epi), mdp.F)[0]
+    if mdp.useSparse:
+        Epi = sparse.csr_matrix(Epi)
+        dQ = np.linalg.lstsq(sparse.eye(nS * nA) - (mdp.T * Epi), (mdp.F).todense())[0]
+    else:
+        dQ = np.linalg.lstsq(np.eye(nS * nA) - np.matmul(mdp.T, Epi), mdp.F)[0]
     return np.transpose(dQ)

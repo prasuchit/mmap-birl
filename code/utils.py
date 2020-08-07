@@ -3,6 +3,7 @@ import math
 import options
 import utils2
 import numpy.matlib
+from scipy import sparse
 import time
 from operator import mod
 np.seterr(divide='ignore', invalid='ignore')
@@ -22,8 +23,11 @@ class trajNode:
             s += '  parent: ' + str(self.parent.s) + ', ' + str(self.parent.a) + '\n'
         return s
 
-def approxeq(V, oldV, EPS):
-    return np.linalg.norm(np.reshape(V, len(V)) - np.reshape(oldV, len(oldV))) < EPS
+def approxeq(V, oldV, EPS, useSparse):
+    if useSparse:
+        return sparse.linalg.norm(np.reshape(V, np.shape(V)) - np.reshape(oldV, np.shape(V))) < EPS
+    else:
+        return np.linalg.norm(np.reshape(V, len(V)) - np.reshape(oldV, len(V))) < EPS
 
 def sampleWeight(problem, nF, seed=None):
     
@@ -40,19 +44,19 @@ def sampleWeight(problem, nF, seed=None):
     elif problem.name == 'highway':
         # weights are assigned 1 for collision, n for nlanes, n for nspeeds
         if i == 1:              # fast driver avoids collisions and prefers high speed
-            w[:] = -0.01
-            w[0] = -0.1        # collision
-            w[-1] = 1.0         # high-speed
+            w[0] = -1        # collision
+            w[-1] = 0.1         # high-speed
             ''' Below are equivalent unique weights to the above weights '''
             # w = np.reshape(np.array([0, 0.68729169, 0.6719028,  0.74564387, 0.44982682, 1.]), (nF,1))
             # w = np.reshape(np.array([[6.38479103e-13], [6.48058560e-26], [1.79305356e-12], [1.22686726e-02], [1.29747809e-26], [9.87731327e-01]]), (nF,1))
             # w = np.reshape(np.array([0.04364177, 0.14840312, 0.18681807, 0.21468357, 0.109732, 0.29672148]), (nF,1))
         elif i == 2:            # safe driver avoids collisions and prefers right-most lane
-            w[:] = -0.01
-            w[0] = -0.1           # collision
-            w[problem.nLanes] = 0.5 # right-most lane
+            w[:] = -0.001
+            w[0] = -1           # collision
+            w[problem.nLanes] = 0.1 # right-most lane
+            # w[np.size(w)-2] = 0 # Slight preference for slow speed
+
         elif i == 3:            # erratic driver prefers collisions and high-speed
-            w[:] = -0.01
             w[0] = 1            # collision
             w[-1] = 0.1         # high-speed
         else:
@@ -65,10 +69,17 @@ def sampleWeight(problem, nF, seed=None):
     return w
     
 def convertW2R(weight, mdp):    
-    mdp.weight = weight 
-    reward = np.matmul(mdp.F, weight)
+    if mdp.useSparse:
+        mdp.weight = sparse.csr_matrix(weight)
+    else:
+        mdp.weight = weight
+    reward = np.dot(mdp.F, mdp.weight)
     reward = np.reshape(reward, (mdp.nStates, mdp.nActions), order='F')
     mdp.reward = reward
+    if mdp.useSparse:
+        mdp.reward = sparse.csr_matrix(mdp.reward)
+        for a in range(mdp.nActions):
+            mdp.rewardS[a] = sparse.csr_matrix(mdp.reward[:, a])
     return mdp
 
 def sid2info(sid, nS, nL, nG):
@@ -100,10 +111,17 @@ def info2sid(spd, myx, y, nS, nL, nG):
 def QfromV(V, mdp): 
     nS = mdp.nStates
     nA = mdp.nActions
-    Q = np.zeros((nS, nA))
-    for a in range(nA):
-        expected = np.matmul(np.transpose(mdp.transition[:, :, a]), V)
-        Q[:, a] = mdp.reward[:, a] + mdp.discount * np.squeeze(expected)
+    if mdp.useSparse:
+        Q = sparse.csr_matrix(np.zeros((nS, nA)))
+        for a in range(nA):
+            expectedS = np.dot(np.transpose(mdp.transitionS[a][:, :]), V)
+            Q[:, a] = mdp.rewardS[a] + mdp.discount * np.squeeze(expectedS)
+        
+    else:
+        Q = np.zeros((nS, nA))
+        for a in range(nA):
+            expected = np.matmul(np.transpose(mdp.transition[:, :, a]), V)
+            Q[:, a] = mdp.reward[:, a] + mdp.discount * np.squeeze(expected)
     return Q
 
 def find(arr, func):
@@ -169,9 +187,9 @@ def sampleNewWeight(dims, options, seed=None):
     lb = options.lb 
     ub = options.ub    
     if options.priorType == 'Gaussian':
-        w0 = options.mu + np.random.randn(dims, 1)*options.sigma  # Direct way to do it
-        for i in range(len(w0)):
-            w0[i] = max(lb, min(ub, w0[i])) # Check to ensure weights are within bounds
+        # w0 = options.mu + np.random.randn(dims, 1)*options.sigma  # Direct way to do it
+        # for i in range(len(w0)):
+        #     w0[i] = max(lb, min(ub, w0[i])) # Check to ensure weights are within bounds
 
         mean = np.ones(dims) * options.mu
         cov = np.eye(dims) * options.sigma
@@ -179,9 +197,9 @@ def sampleNewWeight(dims, options, seed=None):
 
         ''' Good weight(s) for testing 5 traj 10 steps 0 occl nGrid 4 HIGHWAY ''' 
         # w0 = np.array([[ 1.        ], [-0.01359188], [ 0.38688691], [-0.04321886], [-0.07878083], [-0.85341881]])
-        ''' Good weight(s) for testing 5 traj 10 steps 0 occl nGrid 4 nBlock 2 Gridworld ''' 
-        # w0 = np.array([[-4.72298204e-01], [-2.39969794e-01], [-5.95197079e-05], [-1.93911446e-01]])
-        # w0 = np.array([[-0.45573616], [ 0.53201201], [-0.1572897 ], [-0.52387681]])
+        # w0 = np.array([[-0.99809947], [ 0.4281479 ], [ 0.4476873 ], [-0.7242095 ], [-0.69139168], [-0.97459464]])
+        ''' Good weight(s) for testing rand behavior 5 traj 10 steps 0 occl nGrid 4 nBlock 2 Gridworld ''' 
+        # w0 = np.array([[-0.08795133], [ 0.6188475 ], [ 0.7069614 ], [-0.0980191 ]]) # manual-nesterov weights
         # w0 = np.array([[-0.3656997 ], [-0.02006794], [-0.25645092], [-0.08164048]]) # scipy weights
         ''' Good weight(s) for testing 5 traj 10 steps 1 occl nGrid 4 nBlock 2 Gridworld ''' 
         # w0 = np.array([[ 0.24116156], [-0.26847642], [ 0.06238525], [-0.08646028]])

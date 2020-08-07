@@ -12,9 +12,9 @@ import math as m
 import time
 import scipy.io as sio
 
-def init(nGrids, nSpeeds, nLanes, discount, bprint):
+def init(nGrids, nSpeeds, nLanes, discount, bprint, useSparse):
 
-    appearanceProb = np.array(np.linspace(0.1,1,num=nLanes, endpoint=False))  # prob. of other car appearing on each lane
+    appearanceProb = np.array(np.linspace(0.4,1,num=nLanes, endpoint=False))  # prob. of other car appearing on each lane
     succProb = np.reshape(np.array([0.8, 0.4, 1.0, 0.8]), (2,2))    # prob of successfully moving in intended way
     carSize  = 2
     nS       = int(nSpeeds*nLanes*m.pow(nGrids,nLanes))
@@ -43,12 +43,11 @@ def init(nGrids, nSpeeds, nLanes, discount, bprint):
                 Y2    = copy.copy(Y)
                 Y2[i] = Y2[i] + 1
                 nY.append(Y2)
-            
         Y2 = copy.copy(Y)
         nY.append(Y2)
         nY = np.array(nY)
         if idx1 is not None:
-            nY[:,idx1[0]] += (spd + 1)
+            nY[:,idx1] += (spd + 1)
         nY[nY > nGrids - 1] = 0
         nY = np.concatenate((nY,np.zeros((np.shape(nY)[0], 1))), axis=1)
 
@@ -65,7 +64,7 @@ def init(nGrids, nSpeeds, nLanes, discount, bprint):
         nY[-1, nLanes] = nY[-1, nLanes] + p
         for a in range(nA):
             # Calculate transition probability
-            for i in range(len(nY)):
+            for i in range(np.shape(nY)[0]):
                 ns = int(utils.info2sid(nX[a, 0], nX[a, 1], nY[i, :], nSpeeds, nLanes, nGrids))
                 if a == 1 or a == 2:
                     pr = (np.power(succProb[0, spd], spd))
@@ -133,20 +132,21 @@ def init(nGrids, nSpeeds, nLanes, discount, bprint):
     mdp.start      = start
     mdp.F          = np.tile(F, (nA, 1))
     mdp.transition = T
-    mdp.weight = None
-    mdp.reward = None
-    mdp.useSparse = 0
+    mdp.weight = np.zeros((nF,1))
+    mdp.reward = np.reshape(np.dot(mdp.F,mdp.weight), (nS, nA))
+    mdp.useSparse = useSparse
+    mdp.sampled = False
 
-    # if mdp.useSparse:
-    #     mdp.transitionS = {}
-    #     mdp.rewardS = {}
-    #     mdp.F      = sparse.csr_matrix(mdp.F)
-    #     mdp.weight = sparse.csr_matrix(mdp.weight)
-    #     mdp.start  = sparse.csr_matrix(mdp.start)
+    if mdp.useSparse:
+        mdp.transitionS = {}
+        mdp.rewardS = {}
+        mdp.F      = sparse.csr_matrix(mdp.F)
+        mdp.weight = sparse.csr_matrix(mdp.weight)
+        mdp.start  = sparse.csr_matrix(mdp.start)
         
-    #     for a in range(mdp.nActions):
-    #         mdp.transitionS[a] = sparse.csr_matrix(mdp.transition[:, :, a])
-    #         mdp.rewardS[a] = sparse.csr_matrix(mdp.reward[:, a])
+        for a in range(mdp.nActions):
+            mdp.transitionS[a] = sparse.csr_matrix(mdp.transition[:, :, a])
+            mdp.rewardS[a] = sparse.csr_matrix(mdp.reward[:, a])
 
     # print("Leaving Highway init")
     

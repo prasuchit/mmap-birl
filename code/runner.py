@@ -19,14 +19,14 @@ def main():
 
     solverMethod = 'manual'
     # solverMethod = 'scipy'
-    # algoName = 'MAP_BIRL'
-    algoName = 'MMAP_BIRL'
+    algoName = 'MAP_BIRL'
+    # algoName = 'MMAP_BIRL'
     llhName = 'BIRL'
     priorName = 'Gaussian'
     # priorName = 'Uniform'
     probName = 'highway'
     # probName = 'gridworld'
-    # optimMethod = 'gradDesc'
+    # optimMethod = 'gradAsc'
     optimMethod = 'nesterovGrad'
     nTrajs = 5
     nSteps = 10
@@ -36,16 +36,17 @@ def main():
     init_nLanes = 3     # Highway problem
     init_nSpeeds = 2    # Highway problem
     init_noise = 0.3
-    numOcclusions = 1
+    numOcclusions = 0
+    useSparse = 0
 
-    normMethod = 'softmax'  # '0-1' 'None'
+    normMethod = '0-1'  # 'softmax' '0-1' 'None'
 
     algo = options.algorithm(algoName, llhName, priorName)
 
     irlOpts = params.setIRLParams(algo, restart=1, solverMethod=solverMethod, optimMethod = optimMethod, normMethod = normMethod, disp=True)
 
     problem = params.setProblemParams(probName, nTrajs=nTrajs, nSteps=nSteps, nOccs = numOcclusions,  gridSize=init_gridSize, 
-                blockSize=init_blockSize, nLanes=init_nLanes, nSpeeds=init_nSpeeds, noise=init_noise, seed=problemSeed)  
+            blockSize=init_blockSize, nLanes=init_nLanes, nSpeeds=init_nSpeeds, noise=init_noise, seed=problemSeed, useSparse = useSparse)  
     
     mdp = generator.generateMDP(problem)
     
@@ -90,7 +91,7 @@ def main():
             currWeight = np.copy(w0)
             currGrad = np.copy(initGrad)
             
-            if optimMethod == 'gradDesc':
+            if optimMethod == 'gradAsc':
                 wL = utils2.gradientDescent(mdp, trajs, opts, currWeight, currGrad, cache)
             elif optimMethod == 'nesterovGrad':
                 wL = utils2.nesterovAccelGrad(mdp, trajs, opts, currWeight, currGrad, cache = cache)
@@ -100,7 +101,7 @@ def main():
             rewardDiff, valueDiff, policyDiff, piL, piE = utils2.computeResults(data, mdp, wL)
 
             # if(policyDiff > 0.15 or rewardDiff > 1.5):
-            if(policyDiff > 0.25):
+            if(policyDiff > 0.3):
                 print(f"Rerunning for better results!\nPolicy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
                 opts.restart += 1
                 if(opts.restart > 5):
@@ -111,7 +112,7 @@ def main():
                 # print("Learned Policy: \n",utils2.piInterpretation(learnedPolicy.squeeze(), problem.name))
                 # print("Sampled weights: \n", w0)
                 opts.restart = 0
-                print("Learned weights: \n", wL)
+                print("Sampled weights: \n", w0, "\nLearned weights: \n", wL)
                 t1 = time.time()
                 runtime = t1 - t0
                 print("Same number of actions between expert and learned pi: ",(piL.squeeze()==piE.squeeze()).sum(),"/",mdp.nStates)

@@ -7,15 +7,16 @@ import gridworld
 import highway3
 import random
 import time
+from scipy import sparse
 np.seterr(divide='ignore', invalid='ignore')
 
 
 def generateMDP(problem, discount=0.99):
     if problem.name == 'gridworld':
-        mdp = gridworld.init(problem.gridSize, problem.blockSize, problem.noise, problem.discount)
+        mdp = gridworld.init(problem.gridSize, problem.blockSize, problem.noise, problem.discount, problem.useSparse)
 
     elif problem.name == 'highway':
-        mdp = highway3.init(problem.gridSize, problem.nSpeeds, problem.nLanes, problem.discount, 1)
+        mdp = highway3.init(problem.gridSize, problem.nSpeeds, problem.nLanes, problem.discount, 1, problem.useSparse)
 
     nS = mdp.nStates
     nA = mdp.nActions
@@ -30,8 +31,9 @@ def generateMDP(problem, discount=0.99):
 def generateDemonstration(mdp, problem, numOccs=0):
     data = options.demonstrations()
     nF = mdp.nFeatures
-    if mdp.weight is None:
+    if mdp.sampled is False:
         w = utils.sampleWeight(problem, nF, problem.seed)
+        mdp.sampled = True
     else:
         w = mdp.weight
     mdp = utils.convertW2R(w, mdp)
@@ -65,26 +67,38 @@ def generateDemonstration(mdp, problem, numOccs=0):
 def generateTrajectory(mdp, problem):
     print('Generate Demonstrations')
     nF = mdp.nFeatures
-    if mdp.weight is None or mdp.reward is None:
+    if mdp.sampled is False:
         w = utils.sampleWeight(problem, nF, problem.seed)
+        mdp.sampled = True
         print('  - sample a new weight')
         mdp = utils.convertW2R(w, mdp)
         print('  - assign weight to the problem')
         print(w)
     if problem.name == 'gridworld':
-        policy, value, _, _ = solver.piMDPToolbox(mdp)
-        optValue = np.matmul(np.transpose(mdp.start), value)
-        print(' - Optimal value : %.4f' % (optValue))
+        if mdp.useSparse:
+            policy, value, _, _ = solver.policyIteration(mdp)
+        else:
+            policy, value, _, _ = solver.piMDPToolbox(mdp)
+
+        optValue = np.dot(np.transpose(mdp.start), value)
+
+        if mdp.useSparse:
+            print(' - Optimal value : ', (optValue[0,0]))
+        else:
+            print(' - Optimal value : %.4f' % (optValue))
         trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
         print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
 
     elif problem.name == 'highway':
         print(f'solve {mdp.name}\n')
         tic = time.time()  
-        policy, value, _ , H = solver.piMDPToolbox(mdp)
+        if mdp.useSparse:
+            policy, value, _, _ = solver.policyIteration(mdp)
+        else:
+            # policy, value, _, _ = solver.policyIteration(mdp)
+            policy, value, _, _ = solver.piMDPToolbox(mdp)
         toc = time.time()
         elapsedTime = toc - tic
-        # featOcc = full(H.T*mdp.start)
         
         # seed = problem.seed  
         print('sample trajectory\n')
@@ -109,12 +123,12 @@ def generateTrajectory(mdp, problem):
         print('\nweight         : ')
         for i in range(mdp.nFeatures):
             print(mdp.weight[i])
-        # print('\nfeat. occupancy: ')
-        # for i = 1:nF
-        #     fprintf('%5.2f ', featOcc(i))
         print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
-        optValue = np.matmul(np.transpose(mdp.start), value)
-        print(' - Optimal value : %.4f' % (optValue))
+        optValue = np.dot(np.transpose(mdp.start), value)
+        if mdp.useSparse:
+            print(' - Optimal value : ', (optValue[0,0]))
+        else:
+            print(' - Optimal value : %.4f' % (optValue))
         print('Time taken: ', elapsedTime, ' sec\n\n')
         
     return trajs, policy
@@ -127,7 +141,11 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed=None):
     np.random.seed(seed)
 
     for m in range(nTrajs):
-        sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start, (mdp.nStates)))
+        if mdp.useSparse:
+            arr = np.array((mdp.start).todense())
+            sample = np.random.multinomial(n=1, pvals=np.reshape(arr, arr.size))
+        else:
+            sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start, (mdp.nStates)))
         s = np.squeeze(np.where(sample == 1))
         v = 0
         for h in range(nSteps):

@@ -16,3 +16,6 @@ class mdp:
         self.VL = None
         self.QL = None
         self.H = None
+        self.rewardS = None
+        self.transitionS = None
+        self.sampled = None

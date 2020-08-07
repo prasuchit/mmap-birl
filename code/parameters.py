@@ -17,14 +17,14 @@ def setIRLParams(alg=None, restart=0, optimizer='Newton-CG', solverMethod= 'scip
     irlOpts.normMethod = normMethod   
     irlOpts.alpha = 1   # learning rate
 
-    if irlOpts.optimMethod == 'gradDesc':
+    if irlOpts.optimMethod == 'gradAsc':
         irlOpts.decay = .95
         irlOpts.MaxIter = 100
         irlOpts.stepsize = 1/irlOpts.MaxIter
 
     elif irlOpts.optimMethod == 'nesterovGrad':
         irlOpts.decay = 0.9
-        irlOpts.MaxIter = 70
+        irlOpts.MaxIter = 100
         irlOpts.stepsize = 1/irlOpts.MaxIter
 
     if irlOpts.priorType == 'Gaussian':
@@ -37,7 +37,7 @@ def setIRLParams(alg=None, restart=0, optimizer='Newton-CG', solverMethod= 'scip
 
     return irlOpts
 
-def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, nOccs = 0, gridSize=12, blockSize=2, nLanes=3, nSpeeds=2, noise=0.3, seed=None):
+def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, nOccs = 0, gridSize=12, blockSize=2, nLanes=3, nSpeeds=2, noise=0.3, seed=None, useSparse = 0):
     problem = options.problem()
     problem.name = name
     problem.iters = np.arange(iters)
@@ -49,6 +49,7 @@ def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, nOccs
     problem.initSeed = 1
     problem.seed = seed
     problem.nOccs = nOccs
+    problem.useSparse = useSparse
 
     if problem.name == 'gridworld':
         problem.gridSize = gridSize

@@ -5,6 +5,7 @@ import numpy as np
 import copy
 import time
 from scipy.optimize._minimize import minimize
+from scipy.special._logsumexp import logsumexp
 
 def gradientDescent(mdp, trajs, opts, currWeight = 0, currGrad = 0, cache = []):
     print("======== MAP Inference ========")
@@ -15,7 +16,7 @@ def gradientDescent(mdp, trajs, opts, currWeight = 0, currGrad = 0, cache = []):
         opts.alpha *= opts.decay
         weightUpdate = np.reshape(weightUpdate,(mdp.nFeatures,1))
         currWeight = currWeight + weightUpdate
-        opti = reuseCacheGrad(currWeight, cache)
+        opti = reuseCacheGrad(currWeight, cache, mdp.useSparse)
         if opti is None:
             print("  No existing cached gradient reusable ")
             pi, H = computeOptmRegn(mdp, currWeight)
@@ -35,8 +36,8 @@ def nesterovAccelGrad(mdp, trajs, opts, currWeight = 0, currGrad = 0, cache = []
         # Step 1 - Partial update
         weightUpdate = (opts.decay * prevGrad)
         weightUpdate = np.reshape(weightUpdate,(mdp.nFeatures,1))
-        currWeight = currWeight + opts.stepsize/2 * weightUpdate
-        opti = reuseCacheGrad(currWeight, cache)
+        currWeight = currWeight + (opts.stepsize/2 * weightUpdate)
+        opti = reuseCacheGrad(currWeight, cache, mdp.useSparse)
         if opti is None:
             print("  No existing cached gradient reusable ")
             pi, H = computeOptmRegn(mdp, currWeight)
@@ -48,7 +49,7 @@ def nesterovAccelGrad(mdp, trajs, opts, currWeight = 0, currGrad = 0, cache = []
         # Step 2 - Full update
         weightUpdate = (opts.decay * prevGrad) + (opts.alpha * currGrad)
         weightUpdate = np.reshape(weightUpdate,(mdp.nFeatures,1))
-        currWeight = currWeight + opts.stepsize/2 * weightUpdate
+        currWeight = currWeight + (opts.stepsize/2 * weightUpdate)
         prevGrad = currGrad
     return currWeight
 
@@ -150,13 +151,19 @@ def processOccl(trajs, nS, nA, nTrajs, nSteps, transition):
     
 def computeOptmRegn(mdp, w):
     mdp = utils.convertW2R(w, mdp)
-    piL, _, _, H = solver.piMDPToolbox(mdp)
+    if mdp.useSparse:
+        piL, _, _, H = solver.policyIteration(mdp)
+    else:
+        piL, _, _, H = solver.piMDPToolbox(mdp)
     return piL, H
 
-def reuseCacheGrad(w, cache):
+def reuseCacheGrad(w, cache, useSparse):
     for opti in cache:
-        H = opti[1]
-        constraint = np.matmul(H, w)
+        if useSparse:
+            H = opti[1].todense()
+        else:
+            H = opti[1]
+        constraint = np.dot(H, w)
         compare = np.where(constraint < 0)
         if compare[0].size > 0:
             return opti
@@ -182,12 +189,22 @@ def piInterpretation(policy, name):
 def computeResults(data, mdp, wL):
 
     mdp = utils.convertW2R(data.weight, mdp)
-    piE, VE, QE, HE = solver.piMDPToolbox(mdp)
-    vE = np.matmul(np.matmul(data.weight.T,HE.T),mdp.start)
+    if mdp.useSparse:
+        piE, VE, QE, HE = solver.policyIteration(mdp)
+        vE = np.array(np.dot(np.dot(data.weight.T,HE.todense().T),mdp.start.todense()))
+        QE = np.array(QE.todense())
+    else:
+        piE, VE, QE, HE = solver.piMDPToolbox(mdp)
+        vE = np.matmul(np.matmul(data.weight.T,HE.T),mdp.start)
 
     mdp = utils.convertW2R(wL, mdp)
-    piL, VL, QL, HL = solver.piMDPToolbox(mdp)
-    vL = np.matmul(np.matmul(wL.T,HL.T),mdp.start)
+    if mdp.useSparse:
+        piL, VL, QL, HL = solver.policyIteration(mdp)
+        vL = np.array(np.dot(np.dot(wL.T,HL.todense().T),mdp.start.todense()))
+        QL = np.array(QL.todense())
+    else:
+        piL, VL, QL, HL = solver.piMDPToolbox(mdp)
+        vL = np.matmul(np.matmul(wL.T,HL.T),mdp.start)
 
     d  = np.zeros((mdp.nStates, 1))
     for s in range(mdp.nStates):
@@ -212,3 +229,9 @@ def normalizedW(weights, normMethod):
     else:   wL = weights # Unnormalized raw weights
 
     return wL
+
+def logsumexp_row_nonzeros(X):
+    result = np.empty(X.shape[0])
+    for i in range(X.shape[0]):
+        result[i] = logsumexp(X.data[X.indptr[i]:X.indptr[i+1]])
+    return result
