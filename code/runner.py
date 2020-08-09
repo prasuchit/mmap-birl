@@ -28,10 +28,10 @@ def main():
     # probName = 'gridworld'
     # optimMethod = 'gradAsc'
     optimMethod = 'nesterovGrad'
-    nTrajs = 5
-    nSteps = 10
+    nTrajs = 200
+    nSteps = 2000
     problemSeed = 1
-    init_gridSize = 4
+    init_gridSize = 8
     init_blockSize = 2
     init_nLanes = 3     # Highway problem
     init_nSpeeds = 2    # Highway problem
@@ -50,22 +50,22 @@ def main():
     
     mdp = generator.generateMDP(problem)
     
-    data = generator.generateDemonstration(mdp, problem, problem.nOccs)
+    expertData = generator.generateDemonstration(mdp, problem, problem.nOccs)
 
     opts = irlOpts
 
-    trajs = data.trajSet
+    trajs = expertData.trajSet
 
-    expertPolicy = data.policy
+    expertPolicy = expertData.policy
     
     if(opts.solverMethod == 'scipy'):
 
         if opts.alg == 'MMAP_BIRL':
             print("Calling MMAP BIRL")
-            birl.MMAP(data, mdp, opts)
+            birl.MMAP(expertData, mdp, opts)
         elif opts.alg == 'MAP_BIRL':
             print("Calling MAP BIRL")
-            birl.MAP(data, mdp, opts)
+            birl.MAP(expertData, mdp, opts)
         else:
             print('Incorrect algorithm chosen: ', opts.alg)
 
@@ -96,13 +96,13 @@ def main():
             elif optimMethod == 'nesterovGrad':
                 wL = utils2.nesterovAccelGrad(mdp, trajs, opts, currWeight, currGrad, cache = cache)
             
-            wL = utils2.normalizedW(wL, normMethod)
+            # wL = utils2.normalizedW(wL, normMethod)
 
-            rewardDiff, valueDiff, policyDiff, piL, piE = utils2.computeResults(data, mdp, wL)
+            rewardDiff, valueDiff, policyDiff, piL, piE = utils2.computeResults(expertData, mdp, wL)
 
             # if(policyDiff > 0.15 or rewardDiff > 1.5):
             if(policyDiff > 0.3):
-                print(f"Rerunning for better results!\nPolicy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
+                print(f"Rerunning for better results!\nValue Diff: {valueDiff.squeeze()} | Policy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
                 opts.restart += 1
                 if(opts.restart > 5):
                     print("Restarted 5 times already! Exiting!")

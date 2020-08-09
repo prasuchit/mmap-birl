@@ -29,7 +29,7 @@ def generateMDP(problem, discount=0.99):
     return mdp
 
 def generateDemonstration(mdp, problem, numOccs=0):
-    data = options.demonstrations()
+    expertData = options.demonstrations()
     nF = mdp.nFeatures
     if mdp.sampled is False:
         w = utils.sampleWeight(problem, nF, problem.seed)
@@ -38,20 +38,20 @@ def generateDemonstration(mdp, problem, numOccs=0):
         w = mdp.weight
     mdp = utils.convertW2R(w, mdp)
     trajs, policy = generateTrajectory(mdp, problem)
-    data.seed = problem.seed
-    data.weight = w
-    data.policy = policy
-    data.trajId = np.ones(problem.nTrajs).astype(int)
-    data.nTrajs = problem.nTrajs
-    data.nSteps = problem.nSteps
+    expertData.seed = problem.seed
+    expertData.weight = w
+    expertData.policy = policy
+    expertData.trajId = np.ones(problem.nTrajs).astype(int)
+    expertData.nTrajs = problem.nTrajs
+    expertData.nSteps = problem.nSteps
     if numOccs > 0 and numOccs <= problem.nSteps:
         random.seed(problem.seed)
         for i in range(problem.nTrajs):
             try:
-                occlusions = np.zeros(data.nSteps)
+                occlusions = np.zeros(expertData.nSteps)
                 # occlusions[random.sample(range(problem.nSteps), numOccs)] = -1
-                occlusions[1 + np.arange(int(data.nSteps/3))] = -1
-                # occlusions[(data.nSteps - 2) - np.arange(int(data.nSteps/3))] = -1
+                occlusions[1 + np.arange(int(expertData.nSteps/3))] = -1
+                # occlusions[(expertData.nSteps - 2) - np.arange(int(expertData.nSteps/3))] = -1
             except ValueError:
                 print("ERROR: Number of occlusions exceed total number of steps. Exiting!")
                 raise SystemExit(0)
@@ -60,9 +60,9 @@ def generateDemonstration(mdp, problem, numOccs=0):
                     trajs[i, j, 0] = occlusions[j]     # The 3rd index holds the s-a pair
                     trajs[i, j, 1] = occlusions[j]     # 0 - state 1 - action
 
-    data.trajSet = trajs
+    expertData.trajSet = trajs
 
-    return data
+    return expertData
 
 def generateTrajectory(mdp, problem):
     print('Generate Demonstrations')
@@ -109,7 +109,7 @@ def generateTrajectory(mdp, problem):
             s = trajs[0, t, 0]
             a = trajs[0, t, 1]
             f = mdp.F[(a)*mdp.nStates + s, :]
-            nFeatures += np.reshape(f, (6,1))
+            nFeatures += np.reshape(f, (nF,1))
 
         print('\n# of collisions: ', nFeatures[0])
         print('\n# of lanes     : ')
@@ -117,7 +117,8 @@ def generateTrajectory(mdp, problem):
             print(nFeatures[1 + i])
         print('\n# of speeds    : ')
         for i in range(problem.nSpeeds):
-            print(nFeatures[1 + problem.nLanes + i])
+            # print(nFeatures[1 + problem.nLanes + i])
+            print(nFeatures[problem.nLanes + i])
         print('\n')
         
         print('\nweight         : ')

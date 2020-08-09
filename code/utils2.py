@@ -186,25 +186,25 @@ def piInterpretation(policy, name):
         print("Problem is not gridworld. This function doesn't work for other problems yet.")
     return actions
 
-def computeResults(data, mdp, wL):
+def computeResults(expertData, mdp, wL):
 
-    mdp = utils.convertW2R(data.weight, mdp)
+    mdp = utils.convertW2R(expertData.weight, mdp)
     if mdp.useSparse:
         piE, VE, QE, HE = solver.policyIteration(mdp)
-        vE = np.array(np.dot(np.dot(data.weight.T,HE.todense().T),mdp.start.todense()))
+        vE = np.array(np.dot(np.dot(expertData.weight.T,HE.todense().T),mdp.start.todense()))
         QE = np.array(QE.todense())
     else:
         piE, VE, QE, HE = solver.piMDPToolbox(mdp)
-        vE = np.matmul(np.matmul(data.weight.T,HE.T),mdp.start)
+        vE = np.matmul(np.matmul(expertData.weight.T,HE.T),mdp.start)
 
     mdp = utils.convertW2R(wL, mdp)
     if mdp.useSparse:
         piL, VL, QL, HL = solver.policyIteration(mdp)
-        vL = np.array(np.dot(np.dot(wL.T,HL.todense().T),mdp.start.todense()))
+        vL = np.array(np.dot(np.dot(expertData.weight.T,HL.todense().T),mdp.start.todense()))
         QL = np.array(QL.todense())
     else:
         piL, VL, QL, HL = solver.piMDPToolbox(mdp)
-        vL = np.matmul(np.matmul(wL.T,HL.T),mdp.start)
+        vL = np.matmul(np.matmul(expertData.weight.T,HL.T),mdp.start)
 
     d  = np.zeros((mdp.nStates, 1))
     for s in range(mdp.nStates):
@@ -215,9 +215,11 @@ def computeResults(data, mdp, wL):
         else:
             d[s] = 1
 
-    rewardDiff = np.linalg.norm(data.weight - wL)
-    valueDiff  = abs(vE - vL)
-    policyDiff = np.sum(d)/mdp.nStates
+    rewardDiff = np.linalg.norm(expertData.weight - wL)
+    ''' The value difference compares the visitation freq of expert and 
+    learner wrt true weights to find the diff in value they acrue '''
+    valueDiff  = abs(vE - vL)   # ILE - Inverse Learning Error
+    policyDiff = np.sum(d)/mdp.nStates  # LBA - Learned Behavior Accuracy
 
     return rewardDiff, valueDiff, policyDiff, piL, piE
 

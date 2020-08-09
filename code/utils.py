@@ -42,7 +42,7 @@ def sampleWeight(problem, nF, seed=None):
             w[-1] = 1
             # w = np.reshape(np.array([[0.        ],  [0.58778302], [0.78240758],  [1.        ]]), (nF,1))
     elif problem.name == 'highway':
-        # weights are assigned 1 for collision, n for nlanes, n for nspeeds
+        # weights are assigned 1 for collision, n for nlanes, 1 for high speed
         if i == 1:              # fast driver avoids collisions and prefers high speed
             w[0] = -1        # collision
             w[-1] = 0.1         # high-speed
@@ -51,10 +51,10 @@ def sampleWeight(problem, nF, seed=None):
             # w = np.reshape(np.array([[6.38479103e-13], [6.48058560e-26], [1.79305356e-12], [1.22686726e-02], [1.29747809e-26], [9.87731327e-01]]), (nF,1))
             # w = np.reshape(np.array([0.04364177, 0.14840312, 0.18681807, 0.21468357, 0.109732, 0.29672148]), (nF,1))
         elif i == 2:            # safe driver avoids collisions and prefers right-most lane
-            w[:] = -0.001
+            # w[:] = -0.001
             w[0] = -1           # collision
             w[problem.nLanes] = 0.1 # right-most lane
-            # w[np.size(w)-2] = 0 # Slight preference for slow speed
+            # w[-1] = -0.0001 # Slight penalty for fast speed
 
         elif i == 3:            # erratic driver prefers collisions and high-speed
             w[0] = 1            # collision

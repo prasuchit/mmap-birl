@@ -35,8 +35,7 @@ def evalToolbox(piL, mdp):
         for a in range(nA):
             act_ind = utils.find(piL, lambda x: x == a)
             if act_ind is not None:
-                Tpi[idx, :] = np.squeeze(
-                    np.transpose(mdp.transition[:, act_ind, a]))
+                Tpi[idx, :] = np.squeeze(np.transpose(mdp.transition[:, act_ind, a]))
         Epi = sparse.csr_matrix(np.zeros((nS, nS * nA)).astype(int))
         act_ind = np.reshape(piL * nS + np.arange(0, nS).reshape((nS, 1)), nS)
         for s in range(nS):

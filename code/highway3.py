@@ -21,6 +21,7 @@ def init(nGrids, nSpeeds, nLanes, discount, bprint, useSparse):
 
     nA = 5                   # nop, move left, move right, speed up, speed down
     nF = (1 + nLanes + nSpeeds)    # collision, lanes, speeds
+    # nF = (1 + nLanes + 1)    # collision, lanes, high speed
     T  = np.zeros((nS, nS, nA))    # state transition probability
     F  = np.zeros((nS, nF))         # state feature
 
@@ -87,6 +88,7 @@ def init(nGrids, nSpeeds, nLanes, discount, bprint, useSparse):
             f[0] = 1
         f[1 + myx] = 1             # lane
         f[1 + nLanes + spd] = 1    # speed
+        # f[nLanes + 1] = 1    # speed
         F[s, :] = np.transpose(f)
 
     # Check transition probability

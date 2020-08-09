@@ -23,13 +23,13 @@ class trajNode:
             s += '  parent: ' + str(self.parent.s) + ', ' + str(self.parent.a) + '\n'
         return s
 
-def MMAP(data, mdp, opts, logging=True):
-    trajs = data.trajSet
+def MMAP(expertData, mdp, opts, logging=True):
+    trajs = expertData.trajSet
     if opts.optimizer is None:
         print('ERR: no opimizer defined.')
         return
 
-    w0 = utils.sampleNewWeight(mdp.nFeatures, opts, data.seed)
+    w0 = utils.sampleNewWeight(mdp.nFeatures, opts, expertData.seed)
     t0 = time.time()
     res = minimize(llh.calcNegMarginalLogPost, w0, args=(trajs, mdp, opts), tol=1e-8, method=opts.optimizer, jac=True, options={'maxiter': 200, 'disp': opts.showMsg})
     t1 = time.time()
@@ -37,7 +37,7 @@ def MMAP(data, mdp, opts, logging=True):
     wL = res.x
     logPost = res.fun
     wL = utils2.normalizedW(wL, opts.normMethod)
-    rewardDiff, valueDiff, policyDiff, piL, piE = utils2.computeResults(data, mdp, wL)
+    rewardDiff, valueDiff, policyDiff, piL, piE = utils2.computeResults(expertData, mdp, wL)
     print("Time taken: ", runtime," seconds")
     print("Same number of actions between expert and learned pi: ",(piL.squeeze()==piE.squeeze()).sum(),"/",mdp.nStates)
     print("Reward Diff: {}| Value Diff: {}| Policy Diff: {}".format(rewardDiff,valueDiff.squeeze(),policyDiff))
@@ -45,9 +45,9 @@ def MMAP(data, mdp, opts, logging=True):
     return wL, logPost, runtime
 
 
-def MAP(data, mdp, opts, logging=True):
+def MAP(expertData, mdp, opts, logging=True):
 
-    trajs = data.trajSet
+    trajs = expertData.trajSet
     if opts.optimizer is None:
         print('ERR: no opimizer defined.')
         return
@@ -58,7 +58,7 @@ def MAP(data, mdp, opts, logging=True):
         sumtime = 0
         sumLogPost = 0
         for i in tqdm(range(opts.restart)):
-            w0 = utils.sampleNewWeight(mdp.nFeatures, opts, data.seed)
+            w0 = utils.sampleNewWeight(mdp.nFeatures, opts, expertData.seed)
             t0 = time.time()
             res = minimize(llh.calcNegLogPost, w0, args=(trajInfo, mdp, opts), tol=1e-8, method=opts.optimizer, jac=True, options={'maxiter': 5, 'disp': opts.showMsg})
             t1 = time.time()
@@ -79,7 +79,7 @@ def MAP(data, mdp, opts, logging=True):
         logPost = res.fun
         
     wL = utils2.normalizedW(wL, opts.normMethod)
-    rewardDiff, valueDiff, policyDiff, piL, piE = utils2.computeResults(data, mdp, wL)
+    rewardDiff, valueDiff, policyDiff, piL, piE = utils2.computeResults(expertData, mdp, wL)
     print("Time taken: ", runtime," seconds")
     print("Same number of actions between expert and learned pi: ",(piL.squeeze()==piE.squeeze()).sum(),"/",mdp.nStates)
     print("Reward Diff: {}| Value Diff: {}| Policy Diff: {}".format(rewardDiff,valueDiff.squeeze(),policyDiff))
