@@ -38,7 +38,7 @@ def sampleWeight(problem, nF, seed=None):
         if i == 0:  # Random behaviour
             w = np.random.rand(nF, 1)
         else:   # Reaching last state is most preferred
-            w[:] = -0.1
+            # w[:] = -0.1
             w[-1] = 1
             # w = np.reshape(np.array([[0.        ],  [0.58778302], [0.78240758],  [1.        ]]), (nF,1))
     elif problem.name == 'highway':
@@ -51,7 +51,6 @@ def sampleWeight(problem, nF, seed=None):
             # w = np.reshape(np.array([[6.38479103e-13], [6.48058560e-26], [1.79305356e-12], [1.22686726e-02], [1.29747809e-26], [9.87731327e-01]]), (nF,1))
             # w = np.reshape(np.array([0.04364177, 0.14840312, 0.18681807, 0.21468357, 0.109732, 0.29672148]), (nF,1))
         elif i == 2:            # safe driver avoids collisions and prefers right-most lane
-            # w[:] = -0.001
             w[0] = -1           # collision
             w[problem.nLanes] = 0.1 # right-most lane
             # w[-1] = -0.0001 # Slight penalty for fast speed
@@ -83,9 +82,9 @@ def convertW2R(weight, mdp):
     return mdp
 
 def sid2info(sid, nS, nL, nG):
-# State id, num speeds, num lanes, num grids
-    # print("SID to Info")
-    # print(f"sid: {sid}| nS: {nS}| nL: {nL}| nG: {nG}")
+    ''' Get State id, nSpeeds, nLanes, nGrids
+    and return speed, self-xpos, others' y pos '''
+
     y = [None] * nL
     for i in range(nL-1,-1,-1):
         y[i] = int(mod(sid, nG))
@@ -93,19 +92,17 @@ def sid2info(sid, nS, nL, nG):
     myx = int(mod(sid, nL))
     sid = int((sid - myx)/nL)
     spd = int(mod(sid, nS))
-    # print(f"spd: {spd}| myx: {myx}| y: {y}")
     return spd, myx, y
 
 def info2sid(spd, myx, y, nS, nL, nG):
+    ''' Get speed, self-xpos, others' y pos, nStates, nLanes, nGrids
+    and return state-id '''
 
-    # print("Info to SID")
     sid = spd
     sid = (sid)*nL + myx
     for i in range(nL):
         sid = (sid)*nG + y[i]
 
-    # print(f"spd: {spd}| myx: {myx}| y: {y}")
-    # print(f"sid: {sid}| nS: {nS}| nL: {nL}| nG: {nG}")
     return sid
 
 def QfromV(V, mdp): 
@@ -132,16 +129,30 @@ def find(arr, func):
         return np.array(l).astype(int)
 
 def getOrigTrajInfo(trajs, mdp):
+    ''' Compute occupancy measure, occlusion info and empirical policy for trajectories. '''
+
     nS = mdp.nStates
     nA = mdp.nActions
 
     trajInfo = options.trajInfo()
     trajInfo.nTrajs = trajs.shape[0]
     trajInfo.nSteps = trajs.shape[1]
-    occlusions, cnt, allOccNxtSts = utils2.processOccl(trajs, nS, nA, trajInfo.nTrajs, trajInfo.nSteps, mdp.transition)
+    occlusions, cnt, occupancy, allOccNxtSts = utils2.processOccl(trajs, nS, nA, trajInfo.nTrajs, trajInfo.nSteps, mdp.transition)
    
     trajInfo.occlusions = np.array(occlusions)
     trajInfo.allOccNxtSts = np.array(allOccNxtSts)
+    piL = np.nan_to_num(cnt / np.matlib.repmat(cnt.sum(axis=1).reshape((nS, 1)), 1, nA))
+    mu = (cnt.sum(axis=1) / nSteps).reshape((nS, 1))
+    occupancy = occupancy / trajInfo.nTrajs
+    nSnA = nS*nA
+    occupancy = occupancy.reshape((nSnA, 1), order='F')
+    
+    # trajInfo.v = np.matmul(np.transpose(mdp.reward.reshape((nSnA, 1))), occupancy).squeeze()
+    trajInfo.pi = piL   # empirical estimate of policy
+    trajInfo.mu = mu    # state visitation
+    trajInfo.occupancy = occupancy  # discounted state-action frequency
+    trajInfo.featExp = np.matmul(np.transpose(mdp.F), trajInfo.occupancy)    # feature expectation
+
     N = np.count_nonzero(cnt)
     trajInfo.cnt = np.zeros((N, 3)).astype(int)
     i = 0
@@ -155,6 +166,8 @@ def getOrigTrajInfo(trajs, mdp):
     return trajInfo
 
 def getTrajInfo(trajs, mdp):
+    ''' Compute occupancy measure and empirical policy for trajectories. '''
+
     nS = mdp.nStates
     nA = mdp.nActions
 
@@ -162,12 +175,28 @@ def getTrajInfo(trajs, mdp):
     trajInfo.nTrajs = trajs.shape[0]
     trajInfo.nSteps = trajs.shape[1]  
     cnt = np.zeros((nS, nA))
+    occupancy = np.zeros((nS, nA))
+    nSteps = 0
     for m in range(trajInfo.nTrajs):
         for h in range(trajInfo.nSteps):
             s = trajs[m, h, 0]
             a = trajs[m, h, 1]
             if -1 not in trajs[m, h, :]:
-                cnt[s, a] += 1
+                cnt[s, a] += 1                
+                occupancy[s, a] += math.pow(mdp.discount, h)
+            nSteps += 1
+    
+    piL = np.nan_to_num(cnt / np.matlib.repmat(cnt.sum(axis=1).reshape((nS, 1)), 1, nA))
+    mu = (cnt.sum(axis=1) / nSteps).reshape((nS, 1))
+    occupancy = np.divide(occupancy,trajInfo.nTrajs)
+    nSnA = nS*nA
+    occupancy = occupancy.reshape((nSnA, 1), order='F')
+    
+    # trajInfo.v = np.matmul(np.transpose(mdp.reward.reshape((nSnA, 1))), occupancy).squeeze()
+    trajInfo.pi = piL   # empirical estimate of policy
+    trajInfo.mu = mu    # state visitation
+    trajInfo.occupancy = occupancy  # discounted state-action frequency
+    trajInfo.featExp = np.dot(np.transpose(mdp.F), trajInfo.occupancy)   # feature expectation
 
     N = np.count_nonzero(cnt)
     trajInfo.cnt = np.zeros((N, 3)).astype(int)

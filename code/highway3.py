@@ -83,9 +83,7 @@ def init(nGrids, nSpeeds, nLanes, discount, bprint, useSparse):
         # Calculate feature
         f = np.zeros((nF, 1))
         
-        # Check collision
-        if Y[myx] > ((nGrids -1) - carSize*2) and Y[myx] < (nGrids-1):
-            f[0] = 1
+        f[0] = int(Y[myx] > ((nGrids -1) - carSize*2) and Y[myx] < (nGrids-1))  # Check collision
         f[1 + myx] = 1             # lane
         f[1 + nLanes + spd] = 1    # speed
         # f[nLanes + 1] = 1    # speed

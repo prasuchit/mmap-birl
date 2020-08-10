@@ -86,7 +86,16 @@ def generateTrajectory(mdp, problem):
             print(' - Optimal value : ', (optValue[0,0]))
         else:
             print(' - Optimal value : %.4f' % (optValue))
-        trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
+        
+        meanThreshold = 1
+        varThreshold = 1
+        if mdp.useSparse:
+            while True:
+                trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
+                if abs(optValue - trajVmean) < meanThreshold and trajVvar < varThreshold:
+                    break
+        else:
+            trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
         print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
 
     elif problem.name == 'highway':
@@ -100,9 +109,18 @@ def generateTrajectory(mdp, problem):
         toc = time.time()
         elapsedTime = toc - tic
         
-        # seed = problem.seed  
-        print('sample trajectory\n')
-        trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
+        optValue = np.dot(np.transpose(mdp.start), value)
+        
+        if mdp.useSparse:
+            meanThreshold = 1
+            varThreshold = 1
+            while True:
+                trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
+                if abs(optValue - trajVmean) < meanThreshold and trajVvar < varThreshold:
+                    break
+        else:
+            trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
+        print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
         
         nFeatures = np.zeros((nF, 1))
         for t in range(problem.nSteps):
@@ -117,8 +135,7 @@ def generateTrajectory(mdp, problem):
             print(nFeatures[1 + i])
         print('\n# of speeds    : ')
         for i in range(problem.nSpeeds):
-            # print(nFeatures[1 + problem.nLanes + i])
-            print(nFeatures[problem.nLanes + i])
+            print(nFeatures[1 + problem.nLanes + i])
         print('\n')
         
         print('\nweight         : ')
@@ -138,16 +155,17 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed=None):
 
     trajs = np.zeros((nTrajs, nSteps, 2)).astype(int)
     vList = np.zeros(nTrajs)
-
     np.random.seed(seed)
-
+    # np.random.seed(None)
     for m in range(nTrajs):
         if mdp.useSparse:
             arr = np.array((mdp.start).todense())
             sample = np.random.multinomial(n=1, pvals=np.reshape(arr, arr.size))
         else:
+            # sample = sampleMultinomial(np.reshape(mdp.start, (mdp.nStates)), seed)
             sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start, (mdp.nStates)))
         s = np.squeeze(np.where(sample == 1))
+        # s = sample
         v = 0
         for h in range(nSteps):
             a = np.squeeze(piL[s])
@@ -156,8 +174,21 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed=None):
             trajs[m, h, :] = [s, a]
             sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.transition[:, s, a], (mdp.nStates)))
             s = np.squeeze(np.where(sample == 1))
+            # sample = sampleMultinomial(np.reshape(mdp.transition[:, s, a], (mdp.nStates)), seed)
+            # s = sample
         vList[m] = v
     Vmean = np.mean(vList)
     Vvar = np.var(vList)
-
+    trajInfo = utils.getTrajInfo(trajs, mdp)
     return trajs, Vmean, Vvar 
+
+
+def sampleMultinomial(dist, seed):
+
+    np.random.seed(seed)
+    x = dist
+    s = np.sum(x)
+    if s != 1: 
+        x = np.divide(x,np.sum(dist))
+    sample = (np.argwhere(np.cumsum(x) > np.random.rand(1))[0])
+    return sample

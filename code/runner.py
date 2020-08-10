@@ -28,10 +28,10 @@ def main():
     # probName = 'gridworld'
     # optimMethod = 'gradAsc'
     optimMethod = 'nesterovGrad'
-    nTrajs = 200
-    nSteps = 2000
+    nTrajs = 100
+    nSteps = 500
     problemSeed = 1
-    init_gridSize = 8
+    init_gridSize = 4
     init_blockSize = 2
     init_nLanes = 3     # Highway problem
     init_nSpeeds = 2    # Highway problem
@@ -39,7 +39,7 @@ def main():
     numOcclusions = 0
     useSparse = 0
 
-    normMethod = '0-1'  # 'softmax' '0-1' 'None'
+    normMethod = 'None'  # 'softmax' '0-1' 'None'
 
     algo = options.algorithm(algoName, llhName, priorName)
 
@@ -96,16 +96,16 @@ def main():
             elif optimMethod == 'nesterovGrad':
                 wL = utils2.nesterovAccelGrad(mdp, trajs, opts, currWeight, currGrad, cache = cache)
             
-            # wL = utils2.normalizedW(wL, normMethod)
+            wL = utils2.normalizedW(wL, normMethod)
 
             rewardDiff, valueDiff, policyDiff, piL, piE = utils2.computeResults(expertData, mdp, wL)
 
-            # if(policyDiff > 0.15 or rewardDiff > 1.5):
-            if(policyDiff > 0.3):
+            if(policyDiff > 0.2 or valueDiff > 3):
+            # if(valueDiff > 5):
                 print(f"Rerunning for better results!\nValue Diff: {valueDiff.squeeze()} | Policy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
                 opts.restart += 1
-                if(opts.restart > 5):
-                    print("Restarted 5 times already! Exiting!")
+                if(opts.restart > 15):
+                    print(f"Restarted {opts.restart} times already! Exiting!")
                     exit(0)
             else:
                 # print("Expert's Policy: \n",utils2.piInterpretation(expertPolicy.squeeze(), problem.name))

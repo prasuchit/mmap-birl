@@ -57,16 +57,18 @@ def processOccl(trajs, nS, nA, nTrajs, nSteps, transition):
 
     occlusions = []    
     cnt = np.zeros((nS, nA))
-    # occlPerTraj = [0]*nTrajs
-    for m in range(nTrajs):
-        for h in range(nSteps):
+    occupancy = np.zeros((nS, nA))
+    nSteps = 0
+    for m in range(trajInfo.nTrajs):
+        for h in range(trajInfo.nSteps):
             s = trajs[m, h, 0]
             a = trajs[m, h, 1]
             if -1 in trajs[m, h, :]:
                occlusions.append([m,h])
-            #    occlPerTraj[m] += 1
             else:
-                cnt[s, a] += 1
+                cnt[s, a] += 1                
+                occupancy[s, a] += math.pow(mdp.discount, h)  # discounted state occupancy (visitation frequency)
+            nSteps += 1
     '''
     # We use bidirectional search logic to find the reachable states from the state before the occluded step in the traj.
     # Similarly, we can use the state after the occl(s).
@@ -147,7 +149,7 @@ def processOccl(trajs, nS, nA, nTrajs, nSteps, transition):
     endPass = time.time()
     print("Time taken for bidirectional search: ", endPass - startPass)
 
-    return occlusions, cnt , allOccNxtSts
+    return occlusions, cnt, occupancy, allOccNxtSts
     
 def computeOptmRegn(mdp, w):
     mdp = utils.convertW2R(w, mdp)
@@ -216,8 +218,8 @@ def computeResults(expertData, mdp, wL):
             d[s] = 1
 
     rewardDiff = np.linalg.norm(expertData.weight - wL)
-    ''' The value difference compares the visitation freq of expert and 
-    learner wrt true weights to find the diff in value they acrue '''
+    ''' The value difference compares the state visitation freq of expert 
+    and learner wrt true weights to find the diff in value they acrue '''
     valueDiff  = abs(vE - vL)   # ILE - Inverse Learning Error
     policyDiff = np.sum(d)/mdp.nStates  # LBA - Learned Behavior Accuracy
 
