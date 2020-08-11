@@ -10,9 +10,8 @@ import solver
 import copy
 import math as m
 import time
-import scipy.io as sio
 
-def init(nGrids, nSpeeds, nLanes, discount, bprint, useSparse):
+def init(nGrids, nSpeeds, nLanes, discount, useSparse):
 
     appearanceProb = np.array(np.linspace(0.4,1,num=nLanes, endpoint=False))  # prob. of other car appearing on each lane
     succProb = np.reshape(np.array([0.8, 0.4, 1.0, 0.8]), (2,2))    # prob of successfully moving in intended way

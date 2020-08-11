@@ -4,6 +4,7 @@ import solver
 import numpy as np
 import copy
 import time
+import math
 from scipy.optimize._minimize import minimize
 from scipy.special._logsumexp import logsumexp
 
@@ -53,22 +54,20 @@ def nesterovAccelGrad(mdp, trajs, opts, currWeight = 0, currGrad = 0, cache = []
         prevGrad = currGrad
     return currWeight
 
-def processOccl(trajs, nS, nA, nTrajs, nSteps, transition):
+def processOccl(trajs, nS, nA, nTrajs, nSteps, discount, transition):
 
     occlusions = []    
     cnt = np.zeros((nS, nA))
     occupancy = np.zeros((nS, nA))
-    nSteps = 0
-    for m in range(trajInfo.nTrajs):
-        for h in range(trajInfo.nSteps):
+    for m in range(nTrajs):
+        for h in range(nSteps):
             s = trajs[m, h, 0]
             a = trajs[m, h, 1]
             if -1 in trajs[m, h, :]:
                occlusions.append([m,h])
             else:
                 cnt[s, a] += 1                
-                occupancy[s, a] += math.pow(mdp.discount, h)  # discounted state occupancy (visitation frequency)
-            nSteps += 1
+                occupancy[s, a] += math.pow(discount, h)  # discounted state occupancy (visitation frequency)
     '''
     # We use bidirectional search logic to find the reachable states from the state before the occluded step in the traj.
     # Similarly, we can use the state after the occl(s).

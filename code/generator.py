@@ -11,12 +11,12 @@ from scipy import sparse
 np.seterr(divide='ignore', invalid='ignore')
 
 
-def generateMDP(problem, discount=0.99):
+def generateMDP(problem):
     if problem.name == 'gridworld':
         mdp = gridworld.init(problem.gridSize, problem.blockSize, problem.noise, problem.discount, problem.useSparse)
 
     elif problem.name == 'highway':
-        mdp = highway3.init(problem.gridSize, problem.nSpeeds, problem.nLanes, problem.discount, 1, problem.useSparse)
+        mdp = highway3.init(problem.gridSize, problem.nSpeeds, problem.nLanes, problem.discount, problem.useSparse)
 
     nS = mdp.nStates
     nA = mdp.nActions
@@ -49,8 +49,8 @@ def generateDemonstration(mdp, problem, numOccs=0):
         for i in range(problem.nTrajs):
             try:
                 occlusions = np.zeros(expertData.nSteps)
-                # occlusions[random.sample(range(problem.nSteps), numOccs)] = -1
-                occlusions[1 + np.arange(int(expertData.nSteps/3))] = -1
+                occlusions[random.sample(range(problem.nSteps), numOccs)] = -1
+                # occlusions[1 + np.arange(int(expertData.nSteps/3))] = -1
                 # occlusions[(expertData.nSteps - 2) - np.arange(int(expertData.nSteps/3))] = -1
             except ValueError:
                 print("ERROR: Number of occlusions exceed total number of steps. Exiting!")

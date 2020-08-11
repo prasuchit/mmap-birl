@@ -41,8 +41,8 @@ def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, nOccs
     problem = options.problem()
     problem.name = name
     problem.iters = np.arange(iters)
-    problem.discount = discount
     problem.nExps = len(problem.iters)
+    problem.discount = discount
     problem.nExperts = 1
     problem.nTrajs = nTrajs
     problem.nSteps = nSteps

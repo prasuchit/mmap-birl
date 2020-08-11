@@ -137,12 +137,12 @@ def getOrigTrajInfo(trajs, mdp):
     trajInfo = options.trajInfo()
     trajInfo.nTrajs = trajs.shape[0]
     trajInfo.nSteps = trajs.shape[1]
-    occlusions, cnt, occupancy, allOccNxtSts = utils2.processOccl(trajs, nS, nA, trajInfo.nTrajs, trajInfo.nSteps, mdp.transition)
+    occlusions, cnt, occupancy, allOccNxtSts = utils2.processOccl(trajs, nS, nA, trajInfo.nTrajs, trajInfo.nSteps, mdp.discount, mdp.transition)
    
     trajInfo.occlusions = np.array(occlusions)
     trajInfo.allOccNxtSts = np.array(allOccNxtSts)
     piL = np.nan_to_num(cnt / np.matlib.repmat(cnt.sum(axis=1).reshape((nS, 1)), 1, nA))
-    mu = (cnt.sum(axis=1) / nSteps).reshape((nS, 1))
+    mu = (cnt.sum(axis=1) / trajInfo.nSteps).reshape((nS, 1))
     occupancy = occupancy / trajInfo.nTrajs
     nSnA = nS*nA
     occupancy = occupancy.reshape((nSnA, 1), order='F')
@@ -176,7 +176,6 @@ def getTrajInfo(trajs, mdp):
     trajInfo.nSteps = trajs.shape[1]  
     cnt = np.zeros((nS, nA))
     occupancy = np.zeros((nS, nA))
-    nSteps = 0
     for m in range(trajInfo.nTrajs):
         for h in range(trajInfo.nSteps):
             s = trajs[m, h, 0]
@@ -184,10 +183,9 @@ def getTrajInfo(trajs, mdp):
             if -1 not in trajs[m, h, :]:
                 cnt[s, a] += 1                
                 occupancy[s, a] += math.pow(mdp.discount, h)
-            nSteps += 1
     
     piL = np.nan_to_num(cnt / np.matlib.repmat(cnt.sum(axis=1).reshape((nS, 1)), 1, nA))
-    mu = (cnt.sum(axis=1) / nSteps).reshape((nS, 1))
+    mu = (cnt.sum(axis=1) / trajInfo.nSteps).reshape((nS, 1))
     occupancy = np.divide(occupancy,trajInfo.nTrajs)
     nSnA = nS*nA
     occupancy = occupancy.reshape((nSnA, 1), order='F')

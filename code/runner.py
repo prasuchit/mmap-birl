@@ -24,19 +24,19 @@ def main():
     llhName = 'BIRL'
     priorName = 'Gaussian'
     # priorName = 'Uniform'
-    probName = 'highway'
-    # probName = 'gridworld'
+    # probName = 'highway'
+    probName = 'gridworld'
     # optimMethod = 'gradAsc'
     optimMethod = 'nesterovGrad'
-    nTrajs = 100
-    nSteps = 500
+    nTrajs = 10
+    nSteps = 50
     problemSeed = 1
     init_gridSize = 4
     init_blockSize = 2
     init_nLanes = 3     # Highway problem
     init_nSpeeds = 2    # Highway problem
     init_noise = 0.3
-    numOcclusions = 0
+    numOcclusions = 1
     useSparse = 0
 
     normMethod = 'None'  # 'softmax' '0-1' 'None'
