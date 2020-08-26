@@ -38,12 +38,13 @@ def calcNegMarginalLogPost(w, trajs, mdp, options):
 
 def multiProcess(w, trajs, mdp, options):
 
-    occs = originalInfo.occlusions
     llh = 0
     grad1 = 0
     mresult = []
     with Pool(processes = 5) as pool:
         if(mdp.nOccs > 0):
+            originalInfo = utils.getOrigTrajInfo(trajs, mdp)
+            occs = originalInfo.occlusions
             # print("Compute posterior with marginalization...")
             # start_t = time.time()
             originalInfo = utils.getOrigTrajInfo(trajs, mdp)
@@ -131,6 +132,7 @@ def calcLogLLH(w, trajInfo, mdp, options):
         piL, VL, QL, H = solver.policyIteration(mdp)
     else:
         piL, VL, QL, H = solver.piMDPToolbox(mdp)
+        # piL, VL, QL, H = solver.policyIteration(mdp)
     dQ = calcGradQ(piL, mdp)
     nF = mdp.nFeatures
     nS = mdp.nStates

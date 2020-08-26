@@ -5,6 +5,7 @@ import math
 import utils
 import gridworld
 import highway3
+import sorting
 import random
 import time
 from scipy import sparse
@@ -18,6 +19,9 @@ def generateMDP(problem):
     elif problem.name == 'highway':
         mdp = highway3.init(problem.gridSize, problem.nSpeeds, problem.nLanes, problem.discount, problem.useSparse)
 
+    elif problem.name == 'sorting':
+        mdp = sorting.init(problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus, problem.discount, problem.useSparse, problem.noise)
+    
     nS = mdp.nStates
     nA = mdp.nActions
     I = np.tile(np.eye(nS), (nA, 1))
@@ -74,7 +78,32 @@ def generateTrajectory(mdp, problem):
         mdp = utils.convertW2R(w, mdp)
         print('  - assign weight to the problem')
         print(w)
-    if problem.name == 'gridworld':
+    if problem.name == 'sorting':
+        print(f'solve {mdp.name}\n')
+        tic = time.time()  
+        if mdp.useSparse:
+            policy, value, _, _ = solver.policyIteration(mdp)
+        else:
+            # policy, value, _, _ = solver.policyIteration(mdp)
+            policy, value, _, _ = solver.piMDPToolbox(mdp)
+        toc = time.time()
+        elapsedTime = toc - tic
+        
+        optValue = np.dot(np.transpose(mdp.start), value)
+        
+        if mdp.useSparse:
+            meanThreshold = 1
+            varThreshold = 1
+            while True:
+                trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
+                if abs(abs(optValue[0,0]) - abs(trajVmean)) < meanThreshold and trajVvar < varThreshold:
+                    break
+        else:
+            trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
+        print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
+
+    elif problem.name == 'gridworld':
+        print(f'solve {mdp.name}\n')
         if mdp.useSparse:
             policy, value, _, _ = solver.policyIteration(mdp)
         else:
@@ -87,12 +116,12 @@ def generateTrajectory(mdp, problem):
         else:
             print(' - Optimal value : %.4f' % (optValue))
         
-        meanThreshold = 1
-        varThreshold = 1
         if mdp.useSparse:
+            meanThreshold = 1
+            varThreshold = 1
             while True:
                 trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
-                if abs(optValue - trajVmean) < meanThreshold and trajVvar < varThreshold:
+                if abs(optValue[0,0] - trajVmean) < meanThreshold and trajVvar < varThreshold:
                     break
         else:
             trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
@@ -116,7 +145,7 @@ def generateTrajectory(mdp, problem):
             varThreshold = 1
             while True:
                 trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
-                if abs(optValue - trajVmean) < meanThreshold and trajVvar < varThreshold:
+                if abs(optValue[0,0] - trajVmean) < meanThreshold and trajVvar < varThreshold:
                     break
         else:
             trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
@@ -149,14 +178,18 @@ def generateTrajectory(mdp, problem):
             print(' - Optimal value : %.4f' % (optValue))
         print('Time taken: ', elapsedTime, ' sec\n\n')
         
+    
     return trajs, policy
 
 def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed=None):
 
     trajs = np.zeros((nTrajs, nSteps, 2)).astype(int)
     vList = np.zeros(nTrajs)
-    np.random.seed(seed)
-    # np.random.seed(None)
+    if not mdp.useSparse:
+        # np.random.seed(seed)
+        np.random.seed(None)
+    else:
+        np.random.seed(None)
     for m in range(nTrajs):
         if mdp.useSparse:
             arr = np.array((mdp.start).todense())

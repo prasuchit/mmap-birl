@@ -37,7 +37,8 @@ def setIRLParams(alg=None, restart=0, optimizer='Newton-CG', solverMethod= 'scip
 
     return irlOpts
 
-def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, nOccs = 0, gridSize=12, blockSize=2, nLanes=3, nSpeeds=2, noise=0.3, seed=None, useSparse = 0):
+def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, nOccs = 0, gridSize=12, blockSize=2, nLanes=3, nSpeeds=2, 
+                        nOnionLoc = 5, nEEFLoc = 4, nPredict = 3, nlistIDStatus = 3, noise=0.3, seed=None, useSparse = 0):
     problem = options.problem()
     problem.name = name
     problem.iters = np.arange(iters)
@@ -60,6 +61,14 @@ def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, nOccs
     elif problem.name == 'highway':
         problem.nSpeeds  = nSpeeds
         problem.nLanes   = nLanes
-        problem.gridSize   = gridSize
+        problem.gridSize = gridSize
         problem.filename = name + '_' + str(problem.gridSize) + 'x' + str(problem.nLanes)
+    
+    elif problem.name == 'sorting':
+        problem.nOnionLoc = nOnionLoc
+        problem.nEEFLoc = nEEFLoc
+        problem.nPredict = nPredict
+        problem.nlistIDStatus = nlistIDStatus
+        problem.noise = noise
+        problem.filename = name + '_' + str(problem.nOnionLoc) + 'x' + str(problem.nPredict)
     return problem

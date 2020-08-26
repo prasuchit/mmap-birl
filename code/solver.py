@@ -14,8 +14,12 @@ def piMDPToolbox(mdp):
     SHOW_MSG = False
     nS = mdp.nStates
     nA = mdp.nActions
-    pi = mdptoolbox.mdp.PolicyIterationModified(np.transpose(
-        mdp.transition), mdp.reward, mdp.discount, max_iter=MAX_ITERS, epsilon=EPS)
+    if mdp.useSparse:
+        pi = mdptoolbox.mdp.PolicyIterationModified(np.transpose(
+            mdp.transitionS), mdp.rewardS, mdp.discount, max_iter=MAX_ITERS, epsilon=EPS)
+    else: 
+        pi = mdptoolbox.mdp.PolicyIterationModified(np.transpose(
+            mdp.transition), mdp.reward, mdp.discount, max_iter=MAX_ITERS, epsilon=EPS)
     pi.run()
     Q = utils.QfromV(pi.V, mdp)
     piL = np.reshape(pi.policy, (nS, 1))
@@ -92,11 +96,6 @@ def policyIteration(mdp):
             break
         oldpi = piL
         oldV = V
-
-        # if mdp.useSparse:
-        #     oldV = sparse.csr_matrix(mdp.nStates, 1)
-        # else:
-        #     oldV = zeros(mdp.nStates, 1)
 
     return piL, V, Q, H
 

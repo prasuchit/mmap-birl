@@ -93,7 +93,7 @@ def init(nGrids, nSpeeds, nLanes, discount, useSparse):
         for s in range(nS):
             err = abs(sum(T[:, s, a]) - 1)
             if err > 1e-6 or np.any(T) > 1 or np.any(T) < 0:
-                print('ERROR: %d %d %f\n', s, a, np.sum(T[:, s, a]))
+                print('ERROR: \n', s, a, np.sum(T[:, s, a]))
 
     # Initial state distribution
     start     = np.zeros((nS, 1))
@@ -127,7 +127,7 @@ def init(nGrids, nSpeeds, nLanes, discount, useSparse):
     mdp.nActions   = nA
     mdp.nFeatures  = nF
     mdp.discount   = discount
-    mdp.useSparse  = 1
+    mdp.useSparse  = useSparse
     mdp.start      = start
     mdp.F          = np.tile(F, (nA, 1))
     mdp.transition = T

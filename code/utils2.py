@@ -156,6 +156,7 @@ def computeOptmRegn(mdp, w):
         piL, _, _, H = solver.policyIteration(mdp)
     else:
         piL, _, _, H = solver.piMDPToolbox(mdp)
+        # piL, _, _, H = solver.policyIteration(mdp)
     return piL, H
 
 def reuseCacheGrad(w, cache, useSparse):
@@ -196,6 +197,7 @@ def computeResults(expertData, mdp, wL):
         QE = np.array(QE.todense())
     else:
         piE, VE, QE, HE = solver.piMDPToolbox(mdp)
+        # piE, VE, QE, HE = solver.policyIteration(mdp)
         vE = np.matmul(np.matmul(expertData.weight.T,HE.T),mdp.start)
 
     mdp = utils.convertW2R(wL, mdp)
@@ -205,6 +207,7 @@ def computeResults(expertData, mdp, wL):
         QL = np.array(QL.todense())
     else:
         piL, VL, QL, HL = solver.piMDPToolbox(mdp)
+        # piL, VL, QL, HL = solver.policyIteration(mdp)
         vL = np.matmul(np.matmul(expertData.weight.T,HL.T),mdp.start)
 
     d  = np.zeros((mdp.nStates, 1))

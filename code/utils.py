@@ -61,6 +61,17 @@ def sampleWeight(problem, nF, seed=None):
         else:
             w = np.random.rand(nF, 1)
 
+    elif problem.name == 'sorting':
+        # params_pickinspect_norm = np.array([0.12987012987012986, -0.12987012987012986, -0.12987012987012986, 0.12987012987012986, -0.025974025974025976, 0.12987012987012986, -0.19480519480519481, -0.12987012987012986])
+        params_pickinspect = np.array([1,-1,-1,1,-0.2,1,-1.5,-1.0])
+        # params_pickinspect_prasanth = np.array([1,-1,-1,1,-0.2,1,0,0])
+        # params_pickinspect_tuningfromFE = [ 0.10, 0.0, 0.0, 0.22, -0.12, 0.44, 0.0, -0.12] 
+        # params_DPMBIRL1 = [0.1699966423, -0.5516277664, -0.6421129529, 0.9331813738,
+        #         -0.6127648891, 0.4726631827, -0.7684372134, -0.297890299]
+        # params_EMMLIRL1 = [0.4415719702, -0.4459898567, -0.4551824526, 0.2175143501, 
+        #         -0.4039548401, 0.2734986896, 0.7888035685, -0.5319394064]
+        w = np.reshape(params_pickinspect, (nF,1))
+
     else:
         print("Unknown problem name!!")
         exit(0)
@@ -141,6 +152,7 @@ def getOrigTrajInfo(trajs, mdp):
    
     trajInfo.occlusions = np.array(occlusions)
     trajInfo.allOccNxtSts = np.array(allOccNxtSts)
+    """
     piL = np.nan_to_num(cnt / np.matlib.repmat(cnt.sum(axis=1).reshape((nS, 1)), 1, nA))
     mu = (cnt.sum(axis=1) / trajInfo.nSteps).reshape((nS, 1))
     occupancy = occupancy / trajInfo.nTrajs
@@ -152,7 +164,7 @@ def getOrigTrajInfo(trajs, mdp):
     trajInfo.mu = mu    # state visitation
     trajInfo.occupancy = occupancy  # discounted state-action frequency
     trajInfo.featExp = np.matmul(np.transpose(mdp.F), trajInfo.occupancy)    # feature expectation
-
+    """
     N = np.count_nonzero(cnt)
     trajInfo.cnt = np.zeros((N, 3)).astype(int)
     i = 0
@@ -183,7 +195,7 @@ def getTrajInfo(trajs, mdp):
             if -1 not in trajs[m, h, :]:
                 cnt[s, a] += 1                
                 occupancy[s, a] += math.pow(mdp.discount, h)
-    
+    """"""
     piL = np.nan_to_num(cnt / np.matlib.repmat(cnt.sum(axis=1).reshape((nS, 1)), 1, nA))
     mu = (cnt.sum(axis=1) / trajInfo.nSteps).reshape((nS, 1))
     occupancy = np.divide(occupancy,trajInfo.nTrajs)
@@ -195,7 +207,7 @@ def getTrajInfo(trajs, mdp):
     trajInfo.mu = mu    # state visitation
     trajInfo.occupancy = occupancy  # discounted state-action frequency
     trajInfo.featExp = np.dot(np.transpose(mdp.F), trajInfo.occupancy)   # feature expectation
-
+    
     N = np.count_nonzero(cnt)
     trajInfo.cnt = np.zeros((N, 3)).astype(int)
     i = 0
@@ -230,6 +242,8 @@ def sampleNewWeight(dims, options, seed=None):
         # w0 = np.array([[-0.3656997 ], [-0.02006794], [-0.25645092], [-0.08164048]]) # scipy weights
         ''' Good weight(s) for testing 5 traj 10 steps 1 occl nGrid 4 nBlock 2 Gridworld ''' 
         # w0 = np.array([[ 0.24116156], [-0.26847642], [ 0.06238525], [-0.08646028]])
+        ''' Good weight(s) for testing 5 traj 10 steps 0 occl sorting problem '''
+        # w0 = np.array([])
     else:
         w0 = np.random.uniform(low=lb, high=ub, size=(dims,1))
     return w0

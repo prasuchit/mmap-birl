@@ -70,3 +70,8 @@ class problem:
         self.nSpeed = None
         self.nLane = None
         self.nOccs = None
+        self.nOnionLoc = None
+        self.nEEFLoc = None
+        self.nPredict = None
+        self.nlistIDStatus = None
+        self.useSparse = None
