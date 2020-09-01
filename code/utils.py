@@ -63,8 +63,8 @@ def sampleWeight(problem, nF, seed=None):
 
     elif problem.name == 'sorting':
         # params_pickinspect_norm = np.array([0.12987012987012986, -0.12987012987012986, -0.12987012987012986, 0.12987012987012986, -0.025974025974025976, 0.12987012987012986, -0.19480519480519481, -0.12987012987012986])
-        params_pickinspect = np.array([1,-1,-1,1,-0.2,1,-1.5,-1.0])
-        # params_pickinspect_prasanth = np.array([1,-1,-1,1,-0.2,1,0,0])
+        params_pickinspect = np.array([1,-1,-1,1,0,1.5,0,1])
+        # params_pickinspect_prasanth = np.array([0,0,0,0,-0.2,1,-1,1.5])
         # params_pickinspect_tuningfromFE = [ 0.10, 0.0, 0.0, 0.22, -0.12, 0.44, 0.0, -0.12] 
         # params_DPMBIRL1 = [0.1699966423, -0.5516277664, -0.6421129529, 0.9331813738,
         #         -0.6127648891, 0.4726631827, -0.7684372134, -0.297890299]
@@ -195,7 +195,7 @@ def getTrajInfo(trajs, mdp):
             if -1 not in trajs[m, h, :]:
                 cnt[s, a] += 1                
                 occupancy[s, a] += math.pow(mdp.discount, h)
-    """"""
+    """
     piL = np.nan_to_num(cnt / np.matlib.repmat(cnt.sum(axis=1).reshape((nS, 1)), 1, nA))
     mu = (cnt.sum(axis=1) / trajInfo.nSteps).reshape((nS, 1))
     occupancy = np.divide(occupancy,trajInfo.nTrajs)
@@ -207,7 +207,7 @@ def getTrajInfo(trajs, mdp):
     trajInfo.mu = mu    # state visitation
     trajInfo.occupancy = occupancy  # discounted state-action frequency
     trajInfo.featExp = np.dot(np.transpose(mdp.F), trajInfo.occupancy)   # feature expectation
-    
+    """
     N = np.count_nonzero(cnt)
     trajInfo.cnt = np.zeros((N, 3)).astype(int)
     i = 0

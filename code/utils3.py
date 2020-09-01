@@ -30,56 +30,57 @@ def getValidActions(onionLoc, eefLoc, pred, listidstatus):
         4: 'ClaimNewOnion', 5: 'InspectWithoutPicking', 6: 'ClaimNextInList'}'''
 
     if onionLoc == 0:
-        if eefLoc == 0:
+        if listidstatus == 2:
             actidx = [3]
+        elif listidstatus == 0:
+            actidx = [5]
         else:
-            if listidstatus == 2:  # Cannot claim from list if list not available
-                actidx = [4, 5]
-            else:
-                actidx = [6]
-    elif onionLoc == 1 or onionLoc == 3:
+            actidx = [6]
+        # actidx = [3,5,6]
+    elif onionLoc == 1:
         if pred == 0:
             actidx = [2]
         elif pred == 1:
             actidx = [1]
         else:
             actidx = [0]
+        # actidx = [0,1,2,3,4,5,6]
     elif onionLoc == 2:
-        if listidstatus == 2:  # sorter can claim new onion only when a list of predictions has not been pending
-            actidx = [4, 5]
+        if listidstatus == 2:  # pick-inspect behavior
+            actidx = [4]
+        elif listidstatus == 0:
+            actidx = [5]
         else:
-            # We can't allow ClaimNewOnion with a list available
+            # We can't allow ClaimNextInList with a list available
             actidx = [6]
+    elif onionLoc == 3:
+        if pred == 2:
+            actidx = [0]
+        elif pred == 0:
+            actidx = [2]
+        else:
+            actidx = [1]
     elif onionLoc == 4:
-        if listidstatus == 2:  # Cannot claim from list if list not available
-            actidx = [4, 5]
-        else:
-            actidx = [6]
-
-    # if onionLoc == 1 or onionLoc == 3:
-    #     # home or front
-    #     actidx = [0,1,2]
-    # elif onionLoc == 0 or onionLoc == 4:
-    #     # on conveyor (not picked yet or already placed)
-    #     if listidstatus == 2:  # cannot claim from list if list not available
-    #         actidx = [3,4,5]
-    #     else:  # cannot create list again if a list is already available
-    #         # if we allow ClaimNewOnion with a list available
-    #         actidx = [3,6]
-    #         # then it will do *,0,2,1 ClaimNewOnion 0,2,2,1 ClaimNextInList 0,0,2,1
-    #         # and will assume onion is bad without inspection
-    # elif onionLoc == 2:   # in bin, can't pick from bin because not reachable
-    #     if listidstatus == 2:  # sorter can claim new onion only when a list of predictions has not been pending
-    #         actidx = [4,5]
-    #     else:
-    #         # We can't allow ClaimNewOnion with a list available
-    #         actidx = [6]
+        # if listidstatus == 2:  # Cannot claim from list if list not available
+        #     actidx = [4]
+        # elif listidstatus == 0:
+        #     actidx = [5]
+        # else:
+        #     actidx = [6]
+        actidx = [4, 5, 6]
 
     return actidx
 
 
-def findNxtStates(onionLoc, eefLoc, pred, listidstatus, a, numObjects):
-    # np.random.seed(1)
+def findNxtStates(onionLoc, eefLoc, pred, listidstatus, a):
+    ''' 
+    Onionloc: {0: 'OnConveyor', 1: 'InFront', 2: 'InBin', 3: 'Picked/AtHome', 4: 'Placed'}
+    eefLoc = {0: 'OnConveyor', 1: 'InFront', 2: 'InBin', 3: 'Picked/AtHome'}
+    predictions = {0: 'Bad', 1: 'Good', 2: 'Unknown'}
+    listIDstatus = {0: 'Empty', 1: 'Not Empty', 2: 'Unavailable'} 
+    Actions: {0: 'InspectAfterPicking', 1: 'PlaceOnConveyor', 2: 'PlaceInBin', 3: 'Pick', 
+        4: 'ClaimNewOnion', 5: 'InspectWithoutPicking', 6: 'ClaimNextInList'}'''
+
     if a == 0:
         ''' InspectAfterPicking '''
         # Assumptions: These need to be replaced with real world values later.
@@ -88,20 +89,20 @@ def findNxtStates(onionLoc, eefLoc, pred, listidstatus, a, numObjects):
         if pred == 2:  # it can predict claimed-gripped onion only if prediction is unknown
             # pp = 0.5*0.95
             # pred = np.random.choice([1, 0], 1, p=[1-pp, pp])[0]
-            return [[1, 1, 0, listidstatus], [1, 1, 1, listidstatus]]
+            return [[1, 1, 0, 2], [1, 1, 1, 2]]
         else:
-            return [[1, 1, pred, listidstatus]]
+            return [[onionLoc, 1, pred, listidstatus]]
     elif a == 1:
         ''' PlaceOnConveyor '''
         ''' After we attempt to place on conveyor, pred should become unknown '''
-        return [[4, 0, 2, listidstatus]]
+        return [[4, 0, 2, 2]]
     elif a == 2:
         ''' PlaceInBin '''
         if listidstatus == 1:
             # pp = 1-(2/numObjects)
             # listidstatus = np.random.choice([1, 0], 1, p=[pp, 1-pp])[0]
             ''' After we attempt to place in bin, pred should become unknown '''
-            return [[2, 2, 2, 0], [2,  2, 2, 1]]
+            return [[2, 2, 2, 0], [2, 2, 2, 1]]
         else:
             return [[2, 2, 2, listidstatus]]
     elif a == 3:
@@ -109,7 +110,7 @@ def findNxtStates(onionLoc, eefLoc, pred, listidstatus, a, numObjects):
         return [[3, 3, pred, listidstatus]]
     elif a == 4:
         ''' ClaimNewOnion '''
-        return [[0, eefLoc, 2, listidstatus]]
+        return [[0, eefLoc, 2, 2]]
     elif a == 5:
         ''' InspectWithoutPicking '''
         # cannot apply this action if a list is already available
@@ -130,22 +131,25 @@ def findNxtStates(onionLoc, eefLoc, pred, listidstatus, a, numObjects):
             return [[0, eefLoc, 0, 1]]
         else:
             # else make onion unknown and list not available
-            return [[0, eefLoc, 2, 2]]
+            return [[0, eefLoc, 2, listidstatus]]
     return
 
 
 def isValidState(onionLoc, eefLoc, pred, listidstatus, s, ns):
-    #  
-    if (onionLoc == 0 and eefLoc == 1) or (onionLoc == 1 and eefLoc != 1) or (onionLoc == 2 and eefLoc != 2) or (onionLoc == 3 and eefLoc != 3) or (onionLoc == 4 and eefLoc != 0) or s == ns:
+    # or s == ns -> This has been removed from the condn coz even after doing inspect without picking you may find no bad onions and land back in the same state
+    # (onionLoc == 0 and eefLoc == 1) or -> This is valis state but something that shouldn't happen
+    #  or (onionLoc == 4 and eefLoc != 0) -> Testing without this
+    if (onionLoc == 1 and eefLoc != 1) or (onionLoc == 2 and eefLoc != 2) or (onionLoc == 3 and eefLoc != 3):
         return False
     return True
 
 
 def isValidNxtState(a, onionLoc, eefLoc, pred, listidstatus):
-    if (onionLoc == 1 and eefLoc != 1) or (onionLoc == 2 and eefLoc != 2) or (onionLoc == 3 and eefLoc != 3) or (onionLoc == 4 and eefLoc != 0):
+    #  or (onionLoc == 4 and eefLoc != 0) -> Testing without this
+    if (onionLoc == 1 and eefLoc != 1) or (onionLoc == 2 and eefLoc != 2) or (onionLoc == 3 and eefLoc != 3):
         return False
     if a == 1 or a == 2:
-        if (eefLoc == 0 and pred != 2) or (eefLoc == 2 and pred != 2):
+        if (onionLoc == 4 and pred != 2) or (onionLoc == 2 and pred != 2):
             return False
     return True
 

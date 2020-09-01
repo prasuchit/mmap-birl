@@ -86,6 +86,8 @@ def generateTrajectory(mdp, problem):
         else:
             # policy, value, _, _ = solver.policyIteration(mdp)
             policy, value, _, _ = solver.piMDPToolbox(mdp)
+        
+        np.savetxt("policy.csv", policy, delimiter=",")
         toc = time.time()
         elapsedTime = toc - tic
         
