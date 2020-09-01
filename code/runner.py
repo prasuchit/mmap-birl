@@ -26,8 +26,8 @@ def main():
     probName = 'sorting'
     # optimMethod = 'gradAsc'
     optimMethod = 'nesterovGrad'
-    nTrajs = 50
-    nSteps = 100
+    nTrajs = 1
+    nSteps = 200
     problemSeed = 1
     nOnionLoc = 5
     nEEFLoc = 4
@@ -109,8 +109,8 @@ def main():
             rewardDiff, valueDiff, policyDiff, piL, piE = utils2.computeResults(
                 expertData, mdp, wL)
 
-            if(policyDiff > 0.25 or valueDiff > 2.5):
-                # if(policyDiff > 0.3):
+            # if(policyDiff > 0.3 or valueDiff > 3.5):
+            if(policyDiff > 0.3):
                 print(
                     f"Rerunning for better results!\nValue Diff: {valueDiff.squeeze()} | Policy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
                 opts.restart += 1
@@ -128,6 +128,8 @@ def main():
                 runtime = t1 - t0
                 print("Same number of actions between expert and learned pi: ",
                       (piL.squeeze() == piE.squeeze()).sum(), "/", mdp.nStates)
+                np.savetxt("expert_policy.csv", piE, delimiter=",")
+                np.savetxt("learned_policy.csv", piL, delimiter=",")
                 print("Time taken: ", runtime, " seconds")
                 print(
                     f"Policy Diff: {policyDiff} | Reward Diff: {rewardDiff}| Value Diff: {valueDiff.squeeze()}")

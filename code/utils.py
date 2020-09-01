@@ -243,7 +243,7 @@ def sampleNewWeight(dims, options, seed=None):
         ''' Good weight(s) for testing 5 traj 10 steps 1 occl nGrid 4 nBlock 2 Gridworld ''' 
         # w0 = np.array([[ 0.24116156], [-0.26847642], [ 0.06238525], [-0.08646028]])
         ''' Good weight(s) for testing 5 traj 10 steps 0 occl sorting problem '''
-        # w0 = np.array([])
+        # w0 = np.array([[-0.43126238], [ 0.54138168], [-0.20972833], [-0.22880667], [-1.        ], [ 1.        ], [-0.06003629]])
     else:
         w0 = np.random.uniform(low=lb, high=ub, size=(dims,1))
     return w0
