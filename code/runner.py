@@ -110,7 +110,7 @@ def main():
                 expertData, mdp, wL)
 
             # if(policyDiff > 0.3 or valueDiff > 3.5):
-            if(policyDiff > 0.3):
+            if(policyDiff > 0.15):
                 print(
                     f"Rerunning for better results!\nValue Diff: {valueDiff.squeeze()} | Policy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
                 opts.restart += 1

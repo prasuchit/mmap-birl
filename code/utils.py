@@ -38,7 +38,7 @@ def sampleWeight(problem, nF, seed=None):
         if i == 0:  # Random behaviour
             w = np.random.rand(nF, 1)
         else:   # Reaching last state is most preferred
-            # w[:] = -0.1
+            w[:] = -0.1
             w[-1] = 1
             # w = np.reshape(np.array([[0.        ],  [0.58778302], [0.78240758],  [1.        ]]), (nF,1))
     elif problem.name == 'highway':
@@ -46,7 +46,7 @@ def sampleWeight(problem, nF, seed=None):
         if i == 1:              # fast driver avoids collisions and prefers high speed
             w[0] = -1        # collision
             w[-1] = 0.1         # high-speed
-            ''' Below are equivalent unique weights to the above weights '''
+            ''' Below are equivalent unique weights to the above weights learned by irl '''
             # w = np.reshape(np.array([0, 0.68729169, 0.6719028,  0.74564387, 0.44982682, 1.]), (nF,1))
             # w = np.reshape(np.array([[6.38479103e-13], [6.48058560e-26], [1.79305356e-12], [1.22686726e-02], [1.29747809e-26], [9.87731327e-01]]), (nF,1))
             # w = np.reshape(np.array([0.04364177, 0.14840312, 0.18681807, 0.21468357, 0.109732, 0.29672148]), (nF,1))
@@ -62,15 +62,9 @@ def sampleWeight(problem, nF, seed=None):
             w = np.random.rand(nF, 1)
 
     elif problem.name == 'sorting':
-        # params_pickinspect_norm = np.array([0.12987012987012986, -0.12987012987012986, -0.12987012987012986, 0.12987012987012986, -0.025974025974025976, 0.12987012987012986, -0.19480519480519481, -0.12987012987012986])
-        params_pickinspect = np.array([1,-1,-1,1,0,1.5,0,1])
-        # params_pickinspect_prasanth = np.array([0,0,0,0,-0.2,1,-1,1.5])
-        # params_pickinspect_tuningfromFE = [ 0.10, 0.0, 0.0, 0.22, -0.12, 0.44, 0.0, -0.12] 
-        # params_DPMBIRL1 = [0.1699966423, -0.5516277664, -0.6421129529, 0.9331813738,
-        #         -0.6127648891, 0.4726631827, -0.7684372134, -0.297890299]
-        # params_EMMLIRL1 = [0.4415719702, -0.4459898567, -0.4551824526, 0.2175143501, 
-        #         -0.4039548401, 0.2734986896, 0.7888035685, -0.5319394064]
-        w = np.reshape(params_pickinspect, (nF,1))
+        roll_pick = np.array([1,-1,-1,1,-0.2,-0.1,1,-0.1,1,-0.5])
+        pick_inspect = np.array([1,-1,-1,1,-0.2,1,-0.2,1,-0.1,-0.5])
+        w = np.reshape(roll_pick, (nF,1))
 
     else:
         print("Unknown problem name!!")
@@ -94,7 +88,7 @@ def convertW2R(weight, mdp):
 
 def sid2info(sid, nS, nL, nG):
     ''' Get State id, nSpeeds, nLanes, nGrids
-    and return speed, self-xpos, others' y pos '''
+    and return speed, self-xpos, others' y pos for the highway problem '''
 
     y = [None] * nL
     for i in range(nL-1,-1,-1):
@@ -107,7 +101,7 @@ def sid2info(sid, nS, nL, nG):
 
 def info2sid(spd, myx, y, nS, nL, nG):
     ''' Get speed, self-xpos, others' y pos, nStates, nLanes, nGrids
-    and return state-id '''
+        and return state-id for the highway problem '''
 
     sid = spd
     sid = (sid)*nL + myx

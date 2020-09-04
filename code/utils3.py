@@ -3,6 +3,7 @@ from operator import mod
 
 
 def sid2vals(s, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, start):
+    ''' Given state id, this func converts it to the 4 variable values '''
     sid = s
     onionloc = int(mod(sid, nOnionLoc))
     sid = (sid - onionloc)/nOnionLoc
@@ -17,6 +18,7 @@ def sid2vals(s, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, start):
 
 
 def vals2sid(ol, eefl, pred, listst, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus):
+    ''' Given the 4 variable values making up a state, this converts it into state id '''
     return (ol + nOnionLoc * (eefl + nEEFLoc * (pred + nPredict * listst)))
 
 
@@ -32,11 +34,14 @@ def getValidActions(onionLoc, eefLoc, pred, listidstatus):
     if onionLoc == 0:
         if listidstatus == 2:
             actidx = [3]
-        elif listidstatus == 0:
-            actidx = [5]
         else:
-            actidx = [6]
-        # actidx = [3,5,6]
+            if listidstatus == 0:
+                actidx = [5]
+            else:
+                if pred == 2:
+                    actidx = [6]
+                else:
+                    actidx = [3]
     elif onionLoc == 1:
         if pred == 0:
             actidx = [2]
@@ -44,14 +49,12 @@ def getValidActions(onionLoc, eefLoc, pred, listidstatus):
             actidx = [1]
         else:
             actidx = [0]
-        # actidx = [0,1,2,3,4,5,6]
     elif onionLoc == 2:
-        if listidstatus == 2:  # pick-inspect behavior
+        if listidstatus == 2:
             actidx = [4]
         elif listidstatus == 0:
             actidx = [5]
         else:
-            # We can't allow ClaimNextInList with a list available
             actidx = [6]
     elif onionLoc == 3:
         if pred == 2:
@@ -61,13 +64,12 @@ def getValidActions(onionLoc, eefLoc, pred, listidstatus):
         else:
             actidx = [1]
     elif onionLoc == 4:
-        # if listidstatus == 2:  # Cannot claim from list if list not available
-        #     actidx = [4]
-        # elif listidstatus == 0:
-        #     actidx = [5]
-        # else:
-        #     actidx = [6]
-        actidx = [4, 5, 6]
+        if listidstatus == 2:
+            actidx = [4]
+        elif listidstatus == 0:
+            actidx = [5]
+        else:
+            actidx = [6]
 
     return actidx
 
@@ -136,16 +138,12 @@ def findNxtStates(onionLoc, eefLoc, pred, listidstatus, a):
 
 
 def isValidState(onionLoc, eefLoc, pred, listidstatus, s, ns):
-    # or s == ns -> This has been removed from the condn coz even after doing inspect without picking you may find no bad onions and land back in the same state
-    # (onionLoc == 0 and eefLoc == 1) or -> This is valis state but something that shouldn't happen
-    #  or (onionLoc == 4 and eefLoc != 0) -> Testing without this
     if (onionLoc == 1 and eefLoc != 1) or (onionLoc == 2 and eefLoc != 2) or (onionLoc == 3 and eefLoc != 3):
         return False
     return True
 
 
 def isValidNxtState(a, onionLoc, eefLoc, pred, listidstatus):
-    #  or (onionLoc == 4 and eefLoc != 0) -> Testing without this
     if (onionLoc == 1 and eefLoc != 1) or (onionLoc == 2 and eefLoc != 2) or (onionLoc == 3 and eefLoc != 3):
         return False
     if a == 1 or a == 2:
