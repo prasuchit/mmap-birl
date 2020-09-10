@@ -34,14 +34,13 @@ def getValidActions(onionLoc, eefLoc, pred, listidstatus):
     if onionLoc == 0:
         if listidstatus == 2:
             actidx = [3]
-        else:
-            if listidstatus == 0:
+        elif listidstatus == 0:
                 actidx = [5]
+        else:
+            if pred == 2:
+                actidx = [6]
             else:
-                if pred == 2:
-                    actidx = [6]
-                else:
-                    actidx = [3]
+                actidx = [3]
     elif onionLoc == 1:
         if pred == 0:
             actidx = [2]
@@ -70,7 +69,6 @@ def getValidActions(onionLoc, eefLoc, pred, listidstatus):
             actidx = [5]
         else:
             actidx = [6]
-
     return actidx
 
 
@@ -93,7 +91,7 @@ def findNxtStates(onionLoc, eefLoc, pred, listidstatus, a):
             # pred = np.random.choice([1, 0], 1, p=[1-pp, pp])[0]
             return [[1, 1, 0, 2], [1, 1, 1, 2]]
         else:
-            return [[onionLoc, 1, pred, listidstatus]]
+            return [[1, 1, pred, 2]]
     elif a == 1:
         ''' PlaceOnConveyor '''
         ''' After we attempt to place on conveyor, pred should become unknown '''
@@ -136,7 +134,6 @@ def findNxtStates(onionLoc, eefLoc, pred, listidstatus, a):
             return [[0, eefLoc, 2, listidstatus]]
     return
 
-
 def isValidState(onionLoc, eefLoc, pred, listidstatus, s, ns):
     if (onionLoc == 1 and eefLoc != 1) or (onionLoc == 2 and eefLoc != 2) or (onionLoc == 3 and eefLoc != 3):
         return False
@@ -150,7 +147,6 @@ def isValidNxtState(a, onionLoc, eefLoc, pred, listidstatus):
         if (onionLoc == 4 and pred != 2) or (onionLoc == 2 and pred != 2):
             return False
     return True
-
 
 def getKeyFromValue(my_dict, val):
     for key, value in my_dict.items():

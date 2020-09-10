@@ -25,7 +25,7 @@ def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, discount, useSparse, noise
     # 4 combinations of (predicting good/bad and putting it on conveyor/bin) + 1 to stay still
     # + 1 to claim new onion + 1 to create a new list + 1 to pick a good sorting cycle
 
-    nF = 10
+    nF = 9
     T = np.zeros((nS, nS, nA))    # state transition probability
     F = np.zeros((nS, nF))         # state feature
     start = np.zeros((nS, 1))
@@ -88,12 +88,8 @@ def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, discount, useSparse, noise
                     f[7] = 1
 
                 # Pick after rolling
-                if pred == 0 and listidstatus == 1 and nxtS[0] == 3:
+                if pred == 0 and listidstatus == 1 and (nxtS[0] != 2 or nxtS[0] != 4):
                     f[8] = 1
-                
-                # Don't waste time after knowing prediction
-                if pred != 2 and (nxtS[0] != 2 or nxtS[0] != 4):
-                    f[9] = 1
  
         F[s, :] = np.transpose(f)
 

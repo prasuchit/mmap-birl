@@ -62,9 +62,9 @@ def sampleWeight(problem, nF, seed=None):
             w = np.random.rand(nF, 1)
 
     elif problem.name == 'sorting':
-        roll_pick = np.array([1,-1,-1,1,-0.2,-0.1,1,-0.1,1,-0.5])
-        pick_inspect = np.array([1,-1,-1,1,-0.2,1,-0.2,1,-0.1,-0.5])
-        w = np.reshape(roll_pick, (nF,1))
+        roll_pick = np.array([1,-1,-1,1,-0.2,-0.1,1,-0.1,1])
+        pick_inspect = np.array([1,-1,-1,1,0,1.5,0,1,0])
+        w = np.reshape(pick_inspect, (nF,1))
 
     else:
         print("Unknown problem name!!")
