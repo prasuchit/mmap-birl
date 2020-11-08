@@ -9,6 +9,7 @@ from scipy.special._logsumexp import logsumexp
 from scipy import sparse
 from multiprocessing import Pool
 import time
+# import pymc3 as pm 
 np.seterr(divide='ignore', invalid='ignore')
 np.warnings.filterwarnings('ignore')
 np.set_printoptions(threshold=np.inf)
@@ -143,6 +144,7 @@ def calcLogLLH(w, trajInfo, mdp, options):
         BQSum = np.reshape(utils2.logsumexp_row_nonzeros(BQ),(nS,1))  
     else:
         BQSum = np.reshape(logsumexp(BQ, axis=1),(nS,1))
+
     NBQ = BQ
     
     NBQ = NBQ - BQSum
@@ -152,12 +154,12 @@ def calcLogLLH(w, trajInfo, mdp, options):
         s = trajInfo.cnt[i, 0]
         a = trajInfo.cnt[i, 1]
         n = trajInfo.cnt[i, 2]
-        llh += NBQ[s, a]*n
+        llh += n*NBQ[s, a]
 
     # Soft-max policy
     pi_sto = np.exp(NBQ) 
 
-    # calculate dlogPi/dw
+    # calculate dlogPi/dtheta ; Theta vector is just the weights.
     dlogPi = np.zeros((nF, nS * nA))
     z = np.zeros((nS,nA))
     for f in range(nF):
@@ -166,7 +168,7 @@ def calcLogLLH(w, trajInfo, mdp, options):
         z = eta * (x - y)  
         dlogPi[f, :] = np.reshape(z, (1, nS * nA), order='F')  
 
-    # Calculating the gradient of the reward function
+    # Calculating the gradient of the llh function
     grad = np.zeros(nF)
     for i in range(len(trajInfo.cnt)):
         s = trajInfo.cnt[i, 0]

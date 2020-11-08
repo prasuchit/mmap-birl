@@ -1,4 +1,5 @@
 import utils
+import utils3
 import llh
 import solver
 import numpy as np
@@ -52,7 +53,10 @@ def nesterovAccelGrad(mdp, trajs, opts, currWeight = 0, currGrad = 0, cache = []
         weightUpdate = np.reshape(weightUpdate,(mdp.nFeatures,1))
         currWeight = currWeight + (opts.stepsize/2 * weightUpdate)
         prevGrad = currGrad
-    return currWeight
+        # mdp = utils.convertW2R(prevGrad, mdp)
+        # piL, _, _, _ = solver.piMDPToolbox(mdp)
+        # mdp = utils3.updateObsvPrior(piL, mdp)
+    return currWeight, mdp
 
 def processOccl(trajs, nS, nA, nTrajs, nSteps, discount, transition):
 
@@ -193,23 +197,50 @@ def computeResults(expertData, mdp, wL):
     mdp = utils.convertW2R(expertData.weight, mdp)
     if mdp.useSparse:
         piE, VE, QE, HE = solver.policyIteration(mdp)
-        vE = np.array(np.dot(np.dot(expertData.weight.T,HE.todense().T),mdp.start.todense()))
+        if mdp.name == 'sorting':
+            if mdp.sorting_behavior == 'pick_inspect':
+                vE = np.array(np.dot(np.dot(expertData.weight.T,HE.todense().T),mdp.start[0].todense()))
+            elif mdp.sorting_behavior == 'roll_pick':
+                vE = np.array(np.dot(np.dot(expertData.weight.T,HE.todense().T),mdp.start[1].todense()))
+            else: print("Undefined Sorting Behavior!")
+        else:
+            vE = np.array(np.dot(np.dot(expertData.weight.T,HE.todense().T),mdp.start.todense()))
         QE = np.array(QE.todense())
     else:
         piE, VE, QE, HE = solver.piMDPToolbox(mdp)
         # piE, VE, QE, HE = solver.policyIteration(mdp)
-        vE = np.matmul(np.matmul(expertData.weight.T,HE.T),mdp.start)
+        if mdp.name == 'sorting':
+            if mdp.sorting_behavior == 'pick_inspect':
+                vE = np.matmul(np.matmul(expertData.weight.T,HE.T),mdp.start[0])
+            elif mdp.sorting_behavior == 'roll_pick':
+                vE = np.matmul(np.matmul(expertData.weight.T,HE.T),mdp.start[1])
+            else: print("Undefined Sorting Behavior!")
+        else:
+            vE = np.matmul(np.matmul(expertData.weight.T,HE.T),mdp.start)
 
     mdp = utils.convertW2R(wL, mdp)
     if mdp.useSparse:
         piL, VL, QL, HL = solver.policyIteration(mdp)
-        vL = np.array(np.dot(np.dot(expertData.weight.T,HL.todense().T),mdp.start.todense()))
+        if mdp.name == 'sorting':
+            if mdp.sorting_behavior == 'pick_inspect':
+                vL = np.array(np.dot(np.dot(expertData.weight.T,HL.todense().T),mdp.start[0].todense()))
+            elif mdp.sorting_behavior == 'roll_pick':
+                vL = np.array(np.dot(np.dot(expertData.weight.T,HL.todense().T),mdp.start[1].todense()))
+            else: print("Undefined Sorting Behavior!")
+        else:
+            vL = np.array(np.dot(np.dot(expertData.weight.T,HL.todense().T),mdp.start.todense()))
         QL = np.array(QL.todense())
     else:
         piL, VL, QL, HL = solver.piMDPToolbox(mdp)
         # piL, VL, QL, HL = solver.policyIteration(mdp)
-        vL = np.matmul(np.matmul(expertData.weight.T,HL.T),mdp.start)
-
+        if mdp.name == 'sorting':
+            if mdp.sorting_behavior == 'pick_inspect':
+                vL = np.matmul(np.matmul(expertData.weight.T,HL.T),mdp.start[0])
+            elif mdp.sorting_behavior == 'roll_pick':
+                vL = np.matmul(np.matmul(expertData.weight.T,HL.T),mdp.start[1])
+            else: print("Undefined Sorting Behavior!")
+        else:
+            vL = np.matmul(np.matmul(expertData.weight.T,HL.T),mdp.start)
     d  = np.zeros((mdp.nStates, 1))
     for s in range(mdp.nStates):
         ixE = QE[s, :] == max(QE[s, :])

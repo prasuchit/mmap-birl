@@ -37,25 +37,25 @@ def evalToolbox(piL, mdp):
         I = sparse.eye(nS)
         Tpi = sparse.csr_matrix(np.zeros((nS, nS)))
         for a in range(nA):
-            act_ind = utils.find(piL, lambda x: x == a)
-            if act_ind is not None:
-                Tpi[idx, :] = np.squeeze(np.transpose(mdp.transition[:, act_ind, a]))
+            state_idx = utils.find(piL, lambda x: x == a)   # state(s) index of action that matches policy action   # state index of action that matches policy action
+            if state_idx is not None:
+                Tpi[idx, :] = np.squeeze(np.transpose(mdp.transition[:, state_idx, a]))
         Epi = sparse.csr_matrix(np.zeros((nS, nS * nA)).astype(int))
-        act_ind = np.reshape(piL * nS + np.arange(0, nS).reshape((nS, 1)), nS)
+        state_idx = np.reshape(piL * nS + np.arange(0, nS).reshape((nS, 1)), nS) # Scaled s*a index
         for s in range(nS):
-            Epi[s, act_ind[s]] = 1
+            Epi[s, state_idx[s]] = 1
     else:
         I = np.eye(nS)
         Tpi = np.zeros((nS, nS))
 
         for a in range(nA):
-            act_ind = utils.find(piL, lambda x: x == a)
-            if act_ind is not None:
-                Tpi[act_ind, :] = np.squeeze(np.transpose(mdp.transition[:, act_ind, a]))
+            state_idx = utils.find(piL, lambda x: x == a)   # state(s) index of action that matches policy action
+            if state_idx is not None:
+                Tpi[state_idx, :] = np.squeeze(np.transpose(mdp.transition[:, state_idx, a]))
         Epi = np.zeros((nS, nS * nA)).astype(int)
-        act_ind = np.reshape(piL * nS + np.arange(0, nS).reshape((nS, 1)), nS)
+        state_idx = np.reshape(piL * nS + np.arange(0, nS).reshape((nS, 1)), nS) # Scaled s*a index
         for s in range(nS):
-            Epi[s, act_ind[s]] = 1
+            Epi[s, state_idx[s]] = 1
 
     H = np.linalg.lstsq(I - mdp.discount * Tpi, np.matmul(Epi, mdp.F))[0]
 
@@ -102,8 +102,8 @@ def policyIteration(mdp):
 
 def evaluate(piL, mdp):
 
-    """This function is being called from policy iteration function.
-    Hence it's currently only used for sparse mdp implementation"""
+    """ This function is being called from policy iteration function.
+    Hence it's currently only used for sparse mdp implementation """
 
     w = mdp.weight
     nS = mdp.nStates
@@ -112,27 +112,27 @@ def evaluate(piL, mdp):
         I = sparse.eye(nS)
         Tpi = sparse.csr_matrix((nS, nS))
         for a in range(nA):
-            act_ind = utils.find(piL, lambda x: x == a)
-            if act_ind is not None:
-                Tpi[act_ind, :] = np.squeeze(np.transpose(mdp.transition[:, act_ind, a]))
+            state_idx = utils.find(piL, lambda x: x == a)   # state(s) index of action that matches policy action
+            if state_idx is not None:
+                Tpi[state_idx, :] = np.squeeze(np.transpose(mdp.transition[:, state_idx, a]))
         Tpi = sparse.csr_matrix(Tpi)
         Epi = sparse.csr_matrix(np.zeros((nS, nS * nA)).astype(int))
-        act_ind = np.reshape(piL * nS + np.arange(0, nS).reshape((nS, 1)), nS)
+        state_idx = np.reshape(piL * nS + np.arange(0, nS).reshape((nS, 1)), nS) # Scaled s*a index
         for s in range(nS):
-            Epi[s, act_ind[s]] = 1
+            Epi[s, state_idx[s]] = 1
     else:
         I = np.eye(nS)
         Tpi = np.zeros((nS, nS))
 
         for a in range(nA):
-            act_ind = utils.find(piL, lambda x: x == a)
-            if act_ind is not None:
-                Tpi[act_ind, :] = np.squeeze(
-                    np.transpose(mdp.transition[:, act_ind, a]))
+            state_idx = utils.find(piL, lambda x: x == a)   # state(s) index of action that matches policy action
+            if state_idx is not None:
+                Tpi[state_idx, :] = np.squeeze(
+                    np.transpose(mdp.transition[:, state_idx, a]))
         Epi = np.zeros((nS, nS * nA)).astype(int)
-        act_ind = np.reshape(piL * nS + np.arange(0, nS).reshape((nS, 1)), nS)
+        state_idx = np.reshape(piL * nS + np.arange(0, nS).reshape((nS, 1)), nS) # Scaled s*a index
         for s in range(nS):
-            Epi[s, act_ind[s]] = 1
+            Epi[s, state_idx[s]] = 1
 
     if mdp.useSparse:
         H = np.linalg.lstsq((I - mdp.discount * Tpi).todense(), np.dot(Epi, mdp.F).todense())[0]

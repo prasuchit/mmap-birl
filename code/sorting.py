@@ -11,24 +11,37 @@ import time
 
 ''' Picked/AtHome - means Sawyer is in hover plane at home position
     Placed - means placed back on conveyor after inspecting and finding status as good
-    onionLoc = {0: 'OnConveyor', 1: 'InFront', 2: 'InBin', 3: 'Picked/AtHome', 4: 'Placed'}
+    onionLoc = {0: 'OnConveyor', 1: 'InFront', 2: 'InBin', 3: 'Picked/AtHome'}
     eefLoc = {0: 'OnConveyor', 1: 'InFront', 2: 'InBin', 3: 'Picked/AtHome'}
     predictions = {0: 'Bad', 1: 'Good', 2: 'Unknown'}
     listIDstatus = {0: 'Empty', 1: 'Not Empty', 2: 'Unavailable'} 
     actList = {0: 'InspectAfterPicking', 1: 'PlaceOnConveyor', 2: 'PlaceInBin', 3: 'Pick', 
         4: 'ClaimNewOnion', 5: 'InspectWithoutPicking', 6: 'ClaimNextInList'} '''
-
-def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, discount, useSparse, noise=0.05):
+''' For pick inspect, correct policy should have:
+        140 - 3 # Pick
+        143 - 0 # Inspect
+        101 - 2 # bad onion place in bin
+        117 - 1 # good onion place on conv  # This is where the behaviors split off. With pick inspect, roll's 
+        138 - 4 # Claim after putting in bin
+        128 - 4 # Claim after putting on conv
+    For roll pick, correct policy should have:
+        44 - 5  # Roll
+        60 - 3  # Pick
+        63 - 2  # Place in bin
+        90 - 6  # Claim next in list
+        44,42 - 5  # Roll if list is empty  '''
+def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, sorting_behavior, discount, useSparse, noise=0.05):
 
     nS = nOnionLoc*nEEFLoc*nPredict*nlistIDStatus
     nA = 7
+    nBehaviors = 2
     # 4 combinations of (predicting good/bad and putting it on conveyor/bin) + 1 to stay still
     # + 1 to claim new onion + 1 to create a new list + 1 to pick a good sorting cycle
 
-    nF = 9
+    nF = 8
     T = np.zeros((nS, nS, nA))    # state transition probability
     F = np.zeros((nS, nF))         # state feature
-    start = np.zeros((nS, 1))
+    start = np.zeros((nBehaviors, nS, 1))
     for s in range(nS):
         onionLoc, eefLoc, pred, listidstatus, start = utils3.sid2vals(s, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, start)
         actidx = utils3.getValidActions(onionLoc, eefLoc, pred, listidstatus)
@@ -71,25 +84,25 @@ def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, discount, useSparse, noise
                 if pred == 0 and nxtS[0] == 2:
                     f[3] = 1
                     
-                # Stay still
-                if (s == ns):
-                    f[4] = 1
+                # # Stay still
+                # if (s == ns):
+                #     f[4] = 1
 
                 # Claim new onions
                 if pred == 2 and onionLoc == 2 or onionLoc == 4 and nxtS[1] == 3:
-                    f[5] = 1
+                    f[4] = 1
 
                 # Fill the list
                 if listidstatus == 0 and nxtS[3] == 1:
-                    f[6] = 1
+                    f[5] = 1
 
                 # Pick if unknown
                 if onionLoc == 0 and pred == 2 and nxtS[2] == 2 and nxtS[0] == 3:
-                    f[7] = 1
+                    f[6] = 1
 
                 # Pick after rolling
-                if pred == 0 and listidstatus == 1 and (nxtS[0] != 2 or nxtS[0] != 4):
-                    f[8] = 1
+                if pred == 0 and listidstatus == 1 and nxtS[0] != 2:
+                    f[7] = 1
  
         F[s, :] = np.transpose(f)
 
@@ -116,6 +129,7 @@ def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, discount, useSparse, noise
     mdp.reward = np.reshape(np.dot(mdp.F, mdp.weight), (nS, nA))
     mdp.useSparse = useSparse
     mdp.sampled = False
+    mdp.sorting_behavior = sorting_behavior
 
     if mdp.useSparse:
         mdp.transitionS = {}

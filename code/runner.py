@@ -4,6 +4,7 @@ import generator
 import options
 import utils
 import utils2
+import utils3
 import llh
 import numpy as np
 import copy
@@ -26,10 +27,10 @@ def main():
     probName = 'sorting'
     # optimMethod = 'gradAsc'
     optimMethod = 'nesterovGrad'
-    nTrajs = 1
-    nSteps = 200
+    nTrajs = 5
+    nSteps = 1
     problemSeed = 1
-    nOnionLoc = 5
+    nOnionLoc = 4
     nEEFLoc = 4
     nPredict = 3
     nlistIDStatus = 3
@@ -39,6 +40,8 @@ def main():
     init_nSpeeds = 2    # Highway problem
     # init_noise = 0.3    # Gridworld noise
     init_noise = 0.05   # Sorting noise 0.05
+    # sorting_behavior = 'pick_inspect'
+    sorting_behavior = 'roll_pick'
     numOcclusions = 0
     useSparse = 0
 
@@ -50,7 +53,7 @@ def main():
                                   optimMethod=optimMethod, normMethod=normMethod, disp=True)
 
     problem = params.setProblemParams(probName, nTrajs=nTrajs, nSteps=nSteps, nOccs=numOcclusions, gridSize=init_gridSize,
-                                      blockSize=init_blockSize, nLanes=init_nLanes, nSpeeds=init_nSpeeds, nOnionLoc=nOnionLoc, nEEFLoc=nEEFLoc,
+                                      blockSize=init_blockSize, nLanes=init_nLanes, nSpeeds=init_nSpeeds, sorting_behavior = sorting_behavior, nOnionLoc=nOnionLoc, nEEFLoc=nEEFLoc,
                                       nPredict=nPredict, nlistIDStatus=nlistIDStatus, noise=init_noise, seed=problemSeed, useSparse=useSparse)
 
     mdp = generator.generateMDP(problem)
@@ -86,7 +89,6 @@ def main():
             cache = []
 
             t0 = time.time()
-
             print("Compute initial posterior and gradient ...")
             initPost, initGrad = llh.calcNegMarginalLogPost(
                 w0, trajs, mdp, opts)
@@ -101,7 +103,7 @@ def main():
                 wL = utils2.gradientDescent(
                     mdp, trajs, opts, currWeight, currGrad, cache)
             elif optimMethod == 'nesterovGrad':
-                wL = utils2.nesterovAccelGrad(
+                wL, mdp = utils2.nesterovAccelGrad(
                     mdp, trajs, opts, currWeight, currGrad, cache=cache)
 
             wL = utils2.normalizedW(wL, normMethod)
@@ -109,8 +111,8 @@ def main():
             rewardDiff, valueDiff, policyDiff, piL, piE = utils2.computeResults(
                 expertData, mdp, wL)
 
-            # if(policyDiff > 0.3 or valueDiff > 3.5):
-            if(policyDiff > 0.15):
+            if(policyDiff > 0.3 or valueDiff > 4):
+            # if(policyDiff > 0.15):
                 print(
                     f"Rerunning for better results!\nValue Diff: {valueDiff.squeeze()} | Policy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
                 opts.restart += 1

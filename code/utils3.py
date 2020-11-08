@@ -1,8 +1,8 @@
 import numpy as np
 from operator import mod
+from scipy import stats
 
-
-def sid2vals(s, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, start):
+def sid2vals(s, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, start = []):
     ''' Given state id, this func converts it to the 4 variable values '''
     sid = s
     onionloc = int(mod(sid, nOnionLoc))
@@ -12,8 +12,10 @@ def sid2vals(s, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, start):
     predic = int(mod(sid, nPredict))
     sid = (sid - predic)/nPredict
     listidstatus = int(mod(sid, nlistIDStatus))
-    if listidstatus == 2 or predic == 1:
-        start[s] = 1.0
+    if (listidstatus == 2):
+        start[0,s] = 1
+    else:
+        start[1,s] = 1
     return onionloc, eefloc, predic, listidstatus, start
 
 
@@ -24,7 +26,7 @@ def vals2sid(ol, eefl, pred, listst, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus
 
 def getValidActions(onionLoc, eefLoc, pred, listidstatus):
     ''' 
-    Onionloc: {0: 'OnConveyor', 1: 'InFront', 2: 'InBin', 3: 'Picked/AtHome', 4: 'Placed'}
+    Onionloc: {0: 'OnConveyor', 1: 'InFront', 2: 'InBin', 3: 'Picked/AtHome'}
     eefLoc = {0: 'OnConveyor', 1: 'InFront', 2: 'InBin', 3: 'Picked/AtHome'}
     predictions = {0: 'Bad', 1: 'Good', 2: 'Unknown'}
     listIDstatus = {0: 'Empty', 1: 'Not Empty', 2: 'Unavailable'} 
@@ -33,7 +35,10 @@ def getValidActions(onionLoc, eefLoc, pred, listidstatus):
 
     if onionLoc == 0:
         if listidstatus == 2:
-            actidx = [3]
+            if eefLoc == onionLoc:  
+                actidx = [4]
+            else:
+                actidx = [3]
         elif listidstatus == 0:
                 actidx = [5]
         else:
@@ -62,19 +67,12 @@ def getValidActions(onionLoc, eefLoc, pred, listidstatus):
             actidx = [2]
         else:
             actidx = [1]
-    elif onionLoc == 4:
-        if listidstatus == 2:
-            actidx = [4]
-        elif listidstatus == 0:
-            actidx = [5]
-        else:
-            actidx = [6]
     return actidx
 
 
 def findNxtStates(onionLoc, eefLoc, pred, listidstatus, a):
     ''' 
-    Onionloc: {0: 'OnConveyor', 1: 'InFront', 2: 'InBin', 3: 'Picked/AtHome', 4: 'Placed'}
+    Onionloc: {0: 'OnConveyor', 1: 'InFront', 2: 'InBin', 3: 'Picked/AtHome'}
     eefLoc = {0: 'OnConveyor', 1: 'InFront', 2: 'InBin', 3: 'Picked/AtHome'}
     predictions = {0: 'Bad', 1: 'Good', 2: 'Unknown'}
     listIDstatus = {0: 'Empty', 1: 'Not Empty', 2: 'Unavailable'} 
@@ -95,7 +93,7 @@ def findNxtStates(onionLoc, eefLoc, pred, listidstatus, a):
     elif a == 1:
         ''' PlaceOnConveyor '''
         ''' After we attempt to place on conveyor, pred should become unknown '''
-        return [[4, 0, 2, 2]]
+        return [[0, 0, 2, 2]]
     elif a == 2:
         ''' PlaceInBin '''
         if listidstatus == 1:
@@ -153,3 +151,19 @@ def getKeyFromValue(my_dict, val):
         if val == value:
             return key
     return "key doesn't exist"
+
+'''
+def applyObsvProb(ns, a):
+    nOnionLoc = 4
+    nEEFLoc = 4
+    nPredict = 3
+    nlistIDStatus = 3
+    onionLoc, eefLoc, pred, listIDStatus = sid2vals(ns, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus)
+    if a == 0:  # Inspect after picking
+        # We estimate that with pick-inspect we can estimate output with 95% accuracy
+        pred = np.random.choice([pred, not pred], 1, p=[1-pp, 0.95])[0]
+        return vals2sid(onionLoc, eefLoc, pred, listIDStatus, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus)
+    elif a == 5: # Inspect without picking
+
+    return mdp
+'''

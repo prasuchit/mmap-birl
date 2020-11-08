@@ -75,3 +75,4 @@ class problem:
         self.nPredict = None
         self.nlistIDStatus = None
         self.useSparse = None
+        self.sorting_behavior = None
