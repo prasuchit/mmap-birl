@@ -53,7 +53,7 @@ def sampleWeight(problem, nF, seed=None):
         elif i == 2:            # safe driver avoids collisions and prefers right-most lane
             w[0] = -1           # collision
             w[problem.nLanes] = 0.1 # right-most lane
-            # w[-1] = -0.0001 # Slight penalty for fast speed
+            w[-1] = -0.0001 # Slight penalty for fast speed
 
         elif i == 3:            # erratic driver prefers collisions and high-speed
             w[0] = 1            # collision

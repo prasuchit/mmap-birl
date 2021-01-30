@@ -34,6 +34,11 @@ def generateMDP(problem):
     return mdp
 
 def generateDemonstration(mdp, problem, numOccs=0):
+    '''
+    @brief  Generates trajectories using simulate technique and
+            for each traj, generates a list of random indices of
+            len nOccs within range of nSteps where occl are placed.
+    '''
     expertData = options.demonstrations()
     nF = mdp.nFeatures
     if mdp.sampled is False:
@@ -181,8 +186,7 @@ def generateTrajectory(mdp, problem):
             print(' - Optimal value : ', (optValue[0,0]))
         else:
             print(' - Optimal value : %.4f' % (optValue))
-        print('Time taken: ', elapsedTime, ' sec\n\n')
-        
+        print('Time taken: ', elapsedTime, ' sec\n\n')    
     
     return trajs, policy
 
@@ -225,7 +229,6 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None, sorting_behavior =
             trajs[m, h, :] = [s, a]
             sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.transition[:, s, a], (mdp.nStates)))
             if mdp.name == 'sorting':
-                # s = utils3.applyObsvProb(np.squeeze(np.where(sample == 1)),a)
                 s = np.squeeze(np.where(sample == 1))
             else:
                 s = np.squeeze(np.where(sample == 1))
@@ -234,12 +237,15 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None, sorting_behavior =
         vList[m] = v
     Vmean = np.mean(vList)
     Vvar = np.var(vList)
-    trajInfo = utils.getTrajInfo(trajs, mdp)
+    # trajInfo = utils.getTrajInfo(trajs, mdp)
     return trajs, Vmean, Vvar 
 
 
 def sampleMultinomial(dist, seed):
-
+    '''
+    @brief  Returns the index value of the random sample
+            obtained from the distribution provided.
+    '''
     np.random.seed(seed)
     x = dist
     s = np.sum(x)

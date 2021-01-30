@@ -89,7 +89,7 @@ def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, sorting_behavior, discount
                 #     f[4] = 1
 
                 # Claim new onions
-                if pred == 2 and onionLoc == 2 or onionLoc == 4 and nxtS[1] == 3:
+                if pred == 2 and ((onionLoc == 2 or onionLoc == 4) and nxtS[1] == 3):
                     f[4] = 1
 
                 # Fill the list

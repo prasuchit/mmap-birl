@@ -157,7 +157,7 @@ def calcLogLLH(w, trajInfo, mdp, options):
         llh += n*NBQ[s, a]
 
     # Soft-max policy
-    pi_sto = np.exp(NBQ) 
+    pi_sto = np.exp(NBQ)  # Just pi, not log pi anymore
 
     # calculate dlogPi/dtheta ; Theta vector is just the weights.
     dlogPi = np.zeros((nF, nS * nA))

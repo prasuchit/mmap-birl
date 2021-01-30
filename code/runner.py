@@ -11,6 +11,14 @@ import copy
 import solver
 import time
 np.seterr(divide='ignore', invalid='ignore')
+'''
+@author Prasanth Suresh
+@email  ps32611@uga.edu
+@brief  This algorithm extends MAP BIRL(2011) by J.Choi et al. to work
+        with input data that contains noise and missing pieces.
+        The results are tested on a formative toy problem and a summative
+        robotic sorting domain. This paper is in the works. 
+'''
 
 
 def main():
@@ -22,26 +30,26 @@ def main():
     llhName = 'BIRL'
     priorName = 'Gaussian'
     # priorName = 'Uniform'
-    # probName = 'highway'
+    probName = 'highway'
     # probName = 'gridworld'
-    probName = 'sorting'
-    # optimMethod = 'gradAsc'
-    optimMethod = 'nesterovGrad'
-    nTrajs = 5
-    nSteps = 1
+    # probName = 'sorting'
+    optimMethod = 'gradAsc'
+    # optimMethod = 'nesterovGrad'
+    nTrajs = 50
+    nSteps = 100
     problemSeed = 1
     nOnionLoc = 4
     nEEFLoc = 4
     nPredict = 3
     nlistIDStatus = 3
-    init_gridSize = 4
+    init_gridSize = 8
     init_blockSize = 2
     init_nLanes = 3     # Highway problem
     init_nSpeeds = 2    # Highway problem
     # init_noise = 0.3    # Gridworld noise
     init_noise = 0.05   # Sorting noise 0.05
-    # sorting_behavior = 'pick_inspect'
-    sorting_behavior = 'roll_pick'
+    sorting_behavior = 'pick_inspect'
+    # sorting_behavior = 'roll_pick'
     numOcclusions = 0
     useSparse = 0
 
@@ -53,7 +61,7 @@ def main():
                                   optimMethod=optimMethod, normMethod=normMethod, disp=True)
 
     problem = params.setProblemParams(probName, nTrajs=nTrajs, nSteps=nSteps, nOccs=numOcclusions, gridSize=init_gridSize,
-                                      blockSize=init_blockSize, nLanes=init_nLanes, nSpeeds=init_nSpeeds, sorting_behavior = sorting_behavior, nOnionLoc=nOnionLoc, nEEFLoc=nEEFLoc,
+                                      blockSize=init_blockSize, nLanes=init_nLanes, nSpeeds=init_nSpeeds, sorting_behavior=sorting_behavior, nOnionLoc=nOnionLoc, nEEFLoc=nEEFLoc,
                                       nPredict=nPredict, nlistIDStatus=nlistIDStatus, noise=init_noise, seed=problemSeed, useSparse=useSparse)
 
     mdp = generator.generateMDP(problem)
@@ -112,7 +120,6 @@ def main():
                 expertData, mdp, wL)
 
             if(policyDiff > 0.3 or valueDiff > 4):
-            # if(policyDiff > 0.15):
                 print(
                     f"Rerunning for better results!\nValue Diff: {valueDiff.squeeze()} | Policy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
                 opts.restart += 1
@@ -130,15 +137,14 @@ def main():
                 runtime = t1 - t0
                 print("Same number of actions between expert and learned pi: ",
                       (piL.squeeze() == piE.squeeze()).sum(), "/", mdp.nStates)
-                np.savetxt("expert_policy.csv", piE, delimiter=",")
-                np.savetxt("learned_policy.csv", piL, delimiter=",")
+                # np.savetxt("expert_policy.csv", piE, delimiter=",")
+                # np.savetxt("learned_policy.csv", piL, delimiter=",")
                 print("Time taken: ", runtime, " seconds")
                 print(
                     f"Policy Diff: {policyDiff} | Reward Diff: {rewardDiff}| Value Diff: {valueDiff.squeeze()}")
 
     else:
         print("Please check your input!")
-
 
 if __name__ == "__main__":
     main()
