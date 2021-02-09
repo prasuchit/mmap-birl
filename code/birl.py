@@ -60,7 +60,7 @@ def MAP(expertData, mdp, opts, logging=True):
         for i in tqdm(range(opts.restart)):
             w0 = utils.sampleNewWeight(mdp.nFeatures, opts, expertData.seed)
             t0 = time.time()
-            res = minimize(llh.calcNegLogPost, w0, args=(trajInfo, mdp, opts), tol=1e-8, method=opts.optimizer, jac=True, options={'maxiter': 5, 'disp': opts.showMsg})
+            res = minimize(llh.calcNegLogPost, w0, args=(trajInfo,trajs, mdp, opts), tol=1e-8, method=opts.optimizer, jac=True, options={'maxiter': 5, 'disp': opts.showMsg})
             t1 = time.time()
             sumtime += t1 - t0
             wL = res.x
@@ -71,7 +71,7 @@ def MAP(expertData, mdp, opts, logging=True):
         print(res)
     else:
         t0 = time.time()
-        res = minimize(llh.calcNegLogPost, w0, args=(trajInfo, mdp, opts), method=opts.optimizer, jac=True, options={'disp': opts.showMsg})
+        res = minimize(llh.calcNegLogPost, w0, args=(trajInfo,trajs, mdp, opts), method=opts.optimizer, jac=True, options={'disp': opts.showMsg})
         t1 = time.time()
         
         runtime = t1 - t0

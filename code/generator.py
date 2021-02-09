@@ -101,16 +101,21 @@ def generateTrajectory(mdp, problem):
         else:
             optValue = np.dot(np.transpose(mdp.start[1]), value)
         
-        if mdp.useSparse:
-            meanThreshold = 1
-            varThreshold = 1
-            while True:
+        if not problem.obsv_noise:
+            if mdp.useSparse:
+                meanThreshold = 1
+                varThreshold = 1
+                while True:
+                    trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
+                    if abs(abs(optValue[0,0]) - abs(trajVmean)) < meanThreshold and trajVvar < varThreshold:
+                        break
+            else:
                 trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
-                if abs(abs(optValue[0,0]) - abs(trajVmean)) < meanThreshold and trajVvar < varThreshold:
-                    break
+            print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
         else:
-            trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
-        print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
+            trajs = utils3.applyObsvProb(problem, policy, mdp)
+
+
 
     elif problem.name == 'gridworld':
         print(f'solve {mdp.name}\n')
@@ -214,7 +219,7 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None, sorting_behavior =
                 if sorting_behavior == 'pick_inspect':
                     sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start[0], (mdp.nStates)))
                 else:
-                    sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start[1], (mdp.nStates)))
+                    sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start[1], (mdp.nStates)))                  
             else:
                 # sample = sampleMultinomial(np.reshape(mdp.start, (mdp.nStates)), seed)
                 sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start, (mdp.nStates)))

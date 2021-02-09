@@ -1,6 +1,7 @@
 import numpy as np
 import utils
 import utils2
+import utils3
 import solver
 import math
 import copy
@@ -67,7 +68,7 @@ def multiProcess(w, trajs, mdp, options):
             # print("No occlusions found...")
             trajsCopy = copy.copy(trajs)
             trajInfo = utils.getTrajInfo(trajsCopy, mdp)
-            llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
+            llh, grad1 = calcLogLLH(w, trajInfo, trajs, mdp, options)
             grad1 = np.reshape(grad1,(mdp.nFeatures,1))
 
     return llh, grad1
@@ -88,7 +89,7 @@ def serialProcess(w, trajs, mdp, options):
                     trajsCopy[occs[o,0], occs[o,1], 0] = s
                     trajsCopy[occs[o,0], occs[o,1], 1] = a
                     trajInfo = utils.getTrajInfo(trajsCopy, mdp)
-                    mllh, mgrad1 = calcLogLLH(w, trajInfo, mdp, options)
+                    mllh, mgrad1 = calcLogLLH(w, trajInfo, trajs, mdp, options)
                     llh += mllh
                     grad1 += mgrad1
         grad1 = np.reshape(grad1,(mdp.nFeatures,1))
@@ -96,13 +97,13 @@ def serialProcess(w, trajs, mdp, options):
         # print("No occlusions found...")
         trajsCopy = copy.copy(trajs)
         trajInfo = utils.getTrajInfo(trajsCopy, mdp)
-        llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
+        llh, grad1 = calcLogLLH(w, trajInfo, trajs, mdp, options)
         grad1 = np.reshape(grad1,(mdp.nFeatures,1))
 
     return llh, grad1
 
-def calcNegLogPost(w, trajInfo, mdp, options):
-    llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
+def calcNegLogPost(w, trajInfo, trajs, mdp, options):
+    llh, grad1 = calcLogLLH(w, trajInfo, trajs, mdp, options)
     prior, grad2 = calcLogPrior(w, options)
     grad = grad1 + grad2
     post = prior + llh
@@ -126,7 +127,7 @@ def calcLogPrior(w, options):
         
     return prior, grad
 
-def calcLogLLH(w, trajInfo, mdp, options):
+def calcLogLLH(w, trajInfo, trajs, mdp, options):
 
     mdp = utils.convertW2R(w, mdp)
     if mdp.useSparse:
@@ -154,7 +155,27 @@ def calcLogLLH(w, trajInfo, mdp, options):
         s = trajInfo.cnt[i, 0]
         a = trajInfo.cnt[i, 1]
         n = trajInfo.cnt[i, 2]
-        llh += n*NBQ[s, a]
+        onionLoc, eefLoc, pred, listIDStatus = utils3.sid2vals(s)
+        if listIDStatus == 2:
+            method = 0  # 0 - Pick-inspect-place; 1 - Roll-pick-place
+        else: 
+            method = 1
+
+        if pred != 2:
+            obsv_prob = 1 - 0.3*0.95
+        else:
+            obsv_prob = 1
+        # for m in range(trajInfo.nTrajs):
+        #     for h in range(trajInfo.nSteps):
+        #         if s == trajs[m, h, 0] and a == trajs[m, h, 1]:
+        #             if h + 1 != trajInfo.nSteps:
+        #                 ns = trajs[m, h+1, 0]
+        #                 break
+        #     ns = max(mdp.transition[:,s,a])
+
+        ''' with same probability choose the state and do the rest for llh for that state '''
+
+        llh += (np.nonzero(mdp.start[method])[0][0] + max(mdp.transition[:,s,a]) + obsv_prob)*n*NBQ[s, a]
 
     # Soft-max policy
     pi_sto = np.exp(NBQ)  # Just pi, not log pi anymore
@@ -174,8 +195,8 @@ def calcLogLLH(w, trajInfo, mdp, options):
         s = trajInfo.cnt[i, 0]
         a = trajInfo.cnt[i, 1]
         n = trajInfo.cnt[i, 2]
-        j = (a) * nS+s
-        grad += n*dlogPi[:, j] 
+        j = (a) * nS + s
+        grad += (np.nonzero(mdp.start[method])[0][0] + max(mdp.transition[:,s,a]) + obsv_prob)*n*(dlogPi[:, j])
     return llh, grad
 
 def calcGradQ(piL, mdp):

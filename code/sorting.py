@@ -57,25 +57,25 @@ def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, sorting_behavior, discount
                     else:
                         T[91, s, a] = 1   # If next state is valid send it to the sink
                 else:
-                    if not (utils3.isValidState(onionLoc, eefLoc, pred, listidstatus, s, ns)):  # Invalid actions
+                    if not (utils3.isValidState(onionLoc, eefLoc, pred, listidstatus)):  # Invalid actions
                         if not (utils3.isValidNxtState(a, nxtS[0], nxtS[1], nxtS[2], nxtS[3])):
                             T[ns, s, a] = 1
                         else:
-                            # Valid actions leading to valid next states become a sink
+                            # Valid actions in invalid states leading to valid next states become a sink
                             T[91, s, a] = 1   # If next state is valid
                     else:
                         # Valid action in a valid state leading to a valid next state also has a
                         # small failure rate given by noise.
                         if T[s, s, a] == 0:
-                            T[s, s, a] = (noise)    # Noise must only be added once
+                            T[s, s, a] = noise    # Noise must only be added once
                         # Succeding in intended action with high prob
                         T[ns, s, a] += (1 - noise)/len(nextStates)
                 
                 # Calculate features
-                if pred == 1 and nxtS[0] == 4:
+                if pred == 1 and nxtS[0] == 0:
                     f[0] = 1
                     
-                if pred == 0 and nxtS[0] == 4:
+                if pred == 0 and nxtS[0] == 0:
                     f[1] = 1
                     
                 if pred == 1 and nxtS[0] == 2:
@@ -89,7 +89,7 @@ def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, sorting_behavior, discount
                 #     f[4] = 1
 
                 # Claim new onions
-                if pred == 2 and ((onionLoc == 2 or onionLoc == 4) and nxtS[1] == 3):
+                if pred == 2 and ((onionLoc == 2 or onionLoc == 0) and nxtS[1] == 3):
                     f[4] = 1
 
                 # Fill the list
@@ -114,7 +114,8 @@ def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, sorting_behavior, discount
                 print(f"T(:,{s},{a}) = {T[:, s, a]}")
                 print('ERROR: \n', s, a, np.sum(T[:, s, a]))
 
-    start = start / np.sum(start)
+    start[0] = start[0] / np.sum(start[0])
+    start[1] = start[1] / np.sum(start[1])
     mdp = models.mdp()
     mdp.name = 'sorting'
     mdp.nStates = nS

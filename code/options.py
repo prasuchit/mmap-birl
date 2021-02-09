@@ -65,6 +65,7 @@ class problem:
         self.nSteps = None
         self.initSeed = None
         self.noise = None
+        self.obsv_noise = None
         self.filename = None
         self.seed = None
         self.nSpeed = None

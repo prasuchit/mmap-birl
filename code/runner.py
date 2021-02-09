@@ -30,13 +30,13 @@ def main():
     llhName = 'BIRL'
     priorName = 'Gaussian'
     # priorName = 'Uniform'
-    probName = 'highway'
+    # probName = 'highway'
     # probName = 'gridworld'
-    # probName = 'sorting'
+    probName = 'sorting'
     optimMethod = 'gradAsc'
     # optimMethod = 'nesterovGrad'
-    nTrajs = 50
-    nSteps = 100
+    nTrajs = 10
+    nSteps = 50
     problemSeed = 1
     nOnionLoc = 4
     nEEFLoc = 4
@@ -46,8 +46,9 @@ def main():
     init_blockSize = 2
     init_nLanes = 3     # Highway problem
     init_nSpeeds = 2    # Highway problem
-    # init_noise = 0.3    # Gridworld noise
-    init_noise = 0.05   # Sorting noise 0.05
+    # init_noise = 0.3    # Gridworld transition noise
+    init_noise = 0.05   # Sorting transition noise 0.05
+    obsv_noise = True
     sorting_behavior = 'pick_inspect'
     # sorting_behavior = 'roll_pick'
     numOcclusions = 0
@@ -61,8 +62,9 @@ def main():
                                   optimMethod=optimMethod, normMethod=normMethod, disp=True)
 
     problem = params.setProblemParams(probName, nTrajs=nTrajs, nSteps=nSteps, nOccs=numOcclusions, gridSize=init_gridSize,
-                                      blockSize=init_blockSize, nLanes=init_nLanes, nSpeeds=init_nSpeeds, sorting_behavior=sorting_behavior, nOnionLoc=nOnionLoc, nEEFLoc=nEEFLoc,
-                                      nPredict=nPredict, nlistIDStatus=nlistIDStatus, noise=init_noise, seed=problemSeed, useSparse=useSparse)
+                                      blockSize=init_blockSize, nLanes=init_nLanes, nSpeeds=init_nSpeeds, sorting_behavior=sorting_behavior, 
+                                      nOnionLoc=nOnionLoc, nEEFLoc=nEEFLoc, nPredict=nPredict, nlistIDStatus=nlistIDStatus, noise=init_noise,
+                                      obsv_noise=obsv_noise, seed=problemSeed, useSparse=useSparse)
 
     mdp = generator.generateMDP(problem)
 
@@ -88,8 +90,6 @@ def main():
     elif(opts.solverMethod == 'manual'):
 
         while(opts.restart != 0):
-
-            w0 = None
 
             print("Sampling a new weight...")
             w0 = utils.sampleNewWeight(mdp.nFeatures, opts, problemSeed)

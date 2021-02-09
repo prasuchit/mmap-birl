@@ -187,7 +187,7 @@ def getTrajInfo(trajs, mdp):
             s = trajs[m, h, 0]
             a = trajs[m, h, 1]
             if -1 not in trajs[m, h, :]:
-                cnt[s, a] += 1                
+                cnt[s, a] += 1      
                 occupancy[s, a] += math.pow(mdp.discount, h)
     """
     piL = np.nan_to_num(cnt / np.matlib.repmat(cnt.sum(axis=1).reshape((nS, 1)), 1, nA))

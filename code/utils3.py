@@ -1,8 +1,9 @@
 import numpy as np
 from operator import mod
 from scipy import stats
+import generator
 
-def sid2vals(s, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, start = []):
+def sid2vals(s, nOnionLoc = 4, nEEFLoc = 4, nPredict = 3, nlistIDStatus = 3, start = None):
     ''' Given state id, this func converts it to the 4 variable values '''
     sid = s
     onionloc = int(mod(sid, nOnionLoc))
@@ -12,14 +13,18 @@ def sid2vals(s, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, start = []):
     predic = int(mod(sid, nPredict))
     sid = (sid - predic)/nPredict
     listidstatus = int(mod(sid, nlistIDStatus))
-    if (listidstatus == 2):
-        start[0,s] = 1
-    else:
-        start[1,s] = 1
-    return onionloc, eefloc, predic, listidstatus, start
+    if np.sum(start) != None:
+        if (listidstatus == 2):
+            if isValidState(onionloc, eefloc, predic, listidstatus):
+                start[0,s] = 1
+        else:
+            if isValidState(onionloc, eefloc, predic, listidstatus):
+                start[1,s] = 1
+        return onionloc, eefloc, predic, listidstatus, start
+    else: return onionloc, eefloc, predic, listidstatus
 
 
-def vals2sid(ol, eefl, pred, listst, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus):
+def vals2sid(ol, eefl, pred, listst, nOnionLoc = 4, nEEFLoc = 4, nPredict = 3, nlistIDStatus = 3):
     ''' Given the 4 variable values making up a state, this converts it into state id '''
     return (ol + nOnionLoc * (eefl + nEEFLoc * (pred + nPredict * listst)))
 
@@ -31,7 +36,8 @@ def getValidActions(onionLoc, eefLoc, pred, listidstatus):
     predictions = {0: 'Bad', 1: 'Good', 2: 'Unknown'}
     listIDstatus = {0: 'Empty', 1: 'Not Empty', 2: 'Unavailable'} 
     Actions: {0: 'InspectAfterPicking', 1: 'PlaceOnConveyor', 2: 'PlaceInBin', 3: 'Pick', 
-        4: 'ClaimNewOnion', 5: 'InspectWithoutPicking', 6: 'ClaimNextInList'}'''
+        4: 'ClaimNewOnion', 5: 'InspectWithoutPicking', 6: 'ClaimNextInList'}
+    '''
 
     if onionLoc == 0:
         if listidstatus == 2:
@@ -77,7 +83,8 @@ def findNxtStates(onionLoc, eefLoc, pred, listidstatus, a):
     predictions = {0: 'Bad', 1: 'Good', 2: 'Unknown'}
     listIDstatus = {0: 'Empty', 1: 'Not Empty', 2: 'Unavailable'} 
     Actions: {0: 'InspectAfterPicking', 1: 'PlaceOnConveyor', 2: 'PlaceInBin', 3: 'Pick', 
-        4: 'ClaimNewOnion', 5: 'InspectWithoutPicking', 6: 'ClaimNextInList'}'''
+        4: 'ClaimNewOnion', 5: 'InspectWithoutPicking', 6: 'ClaimNextInList'}
+    '''
 
     if a == 0:
         ''' InspectAfterPicking '''
@@ -132,9 +139,13 @@ def findNxtStates(onionLoc, eefLoc, pred, listidstatus, a):
             return [[0, eefLoc, 2, listidstatus]]
     return
 
-def isValidState(onionLoc, eefLoc, pred, listidstatus, s, ns):
-    if (onionLoc == 1 and eefLoc != 1) or (onionLoc == 2 and eefLoc != 2) or (onionLoc == 3 and eefLoc != 3):
-        return False
+def isValidState(onionLoc, eefLoc, pred, listidstatus):
+    if listidstatus == 2:
+        if (onionLoc == 1 and eefLoc != 1) or (onionLoc == 2 and eefLoc != 2) or (onionLoc == 3 and eefLoc != 3):
+            return False
+    else:
+        if (onionLoc == 1 or eefLoc == 1) or (onionLoc == 2 and eefLoc != 2) or (onionLoc == 3 and eefLoc != 3):
+            return False
     return True
 
 
@@ -152,18 +163,18 @@ def getKeyFromValue(my_dict, val):
             return key
     return "key doesn't exist"
 
-'''
-def applyObsvProb(ns, a):
-    nOnionLoc = 4
-    nEEFLoc = 4
-    nPredict = 3
-    nlistIDStatus = 3
-    onionLoc, eefLoc, pred, listIDStatus = sid2vals(ns, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus)
-    if a == 0:  # Inspect after picking
-        # We estimate that with pick-inspect we can estimate output with 95% accuracy
-        pred = np.random.choice([pred, not pred], 1, p=[1-pp, 0.95])[0]
-        return vals2sid(onionLoc, eefLoc, pred, listIDStatus, nOnionLoc, nEEFLoc, nPredict, nlistIDStatus)
-    elif a == 5: # Inspect without picking
-
-    return mdp
-'''
+def applyObsvProb(problem,policy,mdp):
+    trajsSANet = np.loadtxt("trajsFromSANet.csv", dtype = int)
+    trajs, trajVmean, trajVvar = generator.sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
+    for m in range(problem.nTrajs):
+        for h in range(problem.nSteps):
+            s = int(trajs[m,h,0])
+            onionLoc, eefLoc, pred, listIDStatus = sid2vals(s, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus)
+            if pred != 2:
+                # Assumptions: These need to be replaced with real world values later.
+                # prediction that onion is bad. 95% accuracy of detection
+                # 30% of claimable onions on conveyor are bad
+                pp = 0.3*0.95
+                pred = np.random.choice([pred, int(not pred)], 1, p=[1-pp, pp])[0]
+            trajs[m,h,0] = vals2sid(onionLoc, eefLoc, pred, listIDStatus, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus)
+    return trajs
