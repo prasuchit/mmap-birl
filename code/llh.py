@@ -173,9 +173,7 @@ def calcLogLLH(w, trajInfo, trajs, mdp, options):
         #                 break
         #     ns = max(mdp.transition[:,s,a])
 
-        ''' with same probability choose the state and do the rest for llh for that state '''
-
-        llh += (np.nonzero(mdp.start[method])[0][0] + max(mdp.transition[:,s,a]) + obsv_prob)*n*NBQ[s, a]
+        llh += np.log(np.nonzero(mdp.start[method])[0][0] + max(mdp.transition[:,s,a]) + obsv_prob)*n*NBQ[s, a]
 
     # Soft-max policy
     pi_sto = np.exp(NBQ)  # Just pi, not log pi anymore
@@ -196,7 +194,8 @@ def calcLogLLH(w, trajInfo, trajs, mdp, options):
         a = trajInfo.cnt[i, 1]
         n = trajInfo.cnt[i, 2]
         j = (a) * nS + s
-        grad += (np.nonzero(mdp.start[method])[0][0] + max(mdp.transition[:,s,a]) + obsv_prob)*n*(dlogPi[:, j])
+        # grad += np.log(np.nonzero(mdp.start[method])[0][0] + max(mdp.transition[:,s,a]) + obsv_prob)*n*(dlogPi[:, j])
+        grad += n*(dlogPi[:, j])
     return llh, grad
 
 def calcGradQ(piL, mdp):

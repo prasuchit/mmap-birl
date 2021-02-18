@@ -74,7 +74,7 @@ def processOccl(trajs, nS, nA, nTrajs, nSteps, discount, transition):
                 occupancy[s, a] += math.pow(discount, h)  # discounted state occupancy (visitation frequency)
     '''
     # We use bidirectional search logic to find the reachable states from the state before the occluded step in the traj.
-    # Similarly, we can use the state after the occl(s).
+    # Similarly, we can use the state after the occl(s) to do the reverse search and narrow down the possible candidates.
     '''
     startPass = time.time()
     ''' Forward Pass '''

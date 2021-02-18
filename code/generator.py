@@ -93,7 +93,7 @@ def generateTrajectory(mdp, problem):
             # policy, value, _, _ = solver.policyIteration(mdp)
             policy, value, _, _ = solver.piMDPToolbox(mdp)
 
-        # np.savetxt("test_expert_policy.csv", policy, delimiter=",")
+        np.savetxt("expert_policy.csv", policy, delimiter=",")
         toc = time.time()
         elapsedTime = toc - tic
         if mdp.name == 'pick_inspect':
