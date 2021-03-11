@@ -93,7 +93,7 @@ def generateTrajectory(mdp, problem):
             # policy, value, _, _ = solver.policyIteration(mdp)
             policy, value, _, _ = solver.piMDPToolbox(mdp)
 
-        np.savetxt("expert_policy.csv", policy, delimiter=",")
+        # np.savetxt("expert_policy.csv", policy, delimiter=",")
         toc = time.time()
         elapsedTime = toc - tic
         if mdp.name == 'pick_inspect':
@@ -113,7 +113,8 @@ def generateTrajectory(mdp, problem):
                 trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
             print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
         else:
-            trajs = utils3.applyObsvProb(problem, policy, mdp)
+            obsvs = utils3.applyObsvProb(problem, policy, mdp)
+            return obsvs, policy
 
 
 
@@ -245,6 +246,21 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None, sorting_behavior =
     # trajInfo = utils.getTrajInfo(trajs, mdp)
     return trajs, Vmean, Vvar 
 
+
+def sampleLambdaTrajectories(traj, nTrajs, nSteps, seed = None):
+
+    lamdatrajs = np.zeros((nTrajs, nSteps, 2)).astype(int)
+    np.random.seed(seed)
+    for m in range(nTrajs):
+        for h in range(nSteps):
+            s = int(traj[h,0])
+            a = int(traj[h,1])
+            onionLoc, eefLoc, pred, listIDStatus = utils3.sid2vals(s)
+            if pred != 2:
+                pred = np.random.choice([pred, int(not pred)], 1)[0]
+            lamdatrajs[m,h,0] = utils3.vals2sid(onionLoc, eefLoc, pred, listIDStatus)
+            lamdatrajs[m,h,1] = a
+    return lamdatrajs
 
 def sampleMultinomial(dist, seed):
     '''

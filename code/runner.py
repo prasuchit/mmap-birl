@@ -35,8 +35,8 @@ def main():
     probName = 'sorting'
     optimMethod = 'gradAsc'
     # optimMethod = 'nesterovGrad'
-    nTrajs = 10
-    nSteps = 50
+    nTrajs = 1
+    nSteps = 10
     problemSeed = 1
     nOnionLoc = 4
     nEEFLoc = 4
@@ -80,7 +80,7 @@ def main():
 
         if opts.alg == 'MMAP_BIRL':
             print("Calling MMAP BIRL")
-            birl.MMAP(expertData, mdp, opts)
+            birl.MMAP(expertData, mdp, opts, problem)
         elif opts.alg == 'MAP_BIRL':
             print("Calling MAP BIRL")
             birl.MAP(expertData, mdp, opts)
@@ -99,7 +99,7 @@ def main():
             t0 = time.time()
             print("Compute initial posterior and gradient ...")
             initPost, initGrad = llh.calcNegMarginalLogPost(
-                w0, trajs, mdp, opts)
+                w0, trajs, mdp, opts, problem)
             print("Compute initial opimality region ...")
             pi, H = utils2.computeOptmRegn(mdp, w0)
             print("Cache the results ...")
@@ -109,10 +109,10 @@ def main():
 
             if optimMethod == 'gradAsc':
                 wL = utils2.gradientDescent(
-                    mdp, trajs, opts, currWeight, currGrad, cache)
+                    mdp, trajs, problem, opts, currWeight, currGrad,  cache)
             elif optimMethod == 'nesterovGrad':
                 wL, mdp = utils2.nesterovAccelGrad(
-                    mdp, trajs, opts, currWeight, currGrad, cache=cache)
+                    mdp, trajs, problem, opts, currWeight, currGrad, cache=cache)
 
             wL = utils2.normalizedW(wL, normMethod)
 

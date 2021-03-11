@@ -164,8 +164,13 @@ def getKeyFromValue(my_dict, val):
     return "key doesn't exist"
 
 def applyObsvProb(problem,policy,mdp):
-    trajsSANet = np.loadtxt("trajsFromSANet.csv", dtype = int)
-    trajs, trajVmean, trajVvar = generator.sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
+    ''' Here we synthetically generate noisy observations
+    using simulated true trajectories. We could also use SANet
+    trajectories we already have '''
+    
+    # trajsSANet = np.loadtxt("trajsFromSANet.csv", dtype = int)
+    trajs, _, _ = generator.sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
+    obsvs = np.copy(trajs)
     for m in range(problem.nTrajs):
         for h in range(problem.nSteps):
             s = int(trajs[m,h,0])
@@ -176,5 +181,27 @@ def applyObsvProb(problem,policy,mdp):
                 # 30% of claimable onions on conveyor are bad
                 pp = 0.3*0.95
                 pred = np.random.choice([pred, int(not pred)], 1, p=[1-pp, pp])[0]
-            trajs[m,h,0] = vals2sid(onionLoc, eefLoc, pred, listIDStatus, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus)
-    return trajs
+            obsvs[m,h,0] = vals2sid(onionLoc, eefLoc, pred, listIDStatus, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus)
+    return obsvs
+
+def getObsvInfo(trajs, mdp):
+    nS = mdp.nStates
+    nA = mdp.nActions
+    nTraj = np.shape(trajs)[0]
+    nSteps = np.shape(trajs)[1]
+    obsvs = np.copy(trajs)
+    obs_prob = np.zeros((nTraj,nSteps,nS, nA))
+    for m in range(nTraj):
+        for h in range(nSteps):
+            s = obsvs[m,h,0]
+            a = obsvs[m,h,1]
+            onionLoc, eefLoc, pred, listIDStatus = sid2vals(s)
+            s_noisy = vals2sid(onionLoc, eefLoc, int(not pred), listIDStatus)
+            if pred != 2:
+                pp = 0.3*0.95
+                obs_prob[m,h,s,a] = 1 - pp
+                obs_prob[m,h,s_noisy,a] = pp
+            else:
+                obs_prob[m,h,s,a] = 1
+            
+    return obsvs, obs_prob

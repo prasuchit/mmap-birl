@@ -3,6 +3,7 @@ import utils
 import utils2
 import utils3
 import solver
+import generator
 import math
 import copy
 from tqdm import tqdm
@@ -10,15 +11,18 @@ from scipy.special._logsumexp import logsumexp
 from scipy import sparse
 from multiprocessing import Pool
 import time
-# import pymc3 as pm 
 np.seterr(divide='ignore', invalid='ignore')
 np.warnings.filterwarnings('ignore')
 np.set_printoptions(threshold=np.inf)
 
-def calcNegMarginalLogPost(w, trajs, mdp, options):
+def calcNegMarginalLogPost(w, trajs, mdp, options, problem):
 
-    # llh, grad1 = multiProcess(w, trajs, mdp, options)
-    llh, grad1 = serialProcess(w, trajs, mdp, options)
+    if not problem.obsv_noise:
+        # llh, grad1 = multiProcess(w, trajs, mdp, options)
+        llh, grad1 = serialProcess(w, trajs, mdp, options)
+    else:
+        # llh, grad1 = multiProcess_obsv(w, trajs, mdp, options)    # This hasn't been built yet.
+        llh, grad1 = serialProcess_obsv(w, trajs, mdp, options)
     prior, grad2 = calcLogPrior(w, options)
     grad2 = np.reshape(grad2,(mdp.nFeatures,1))
     grad = grad1 + grad2 
@@ -34,7 +38,7 @@ def calcNegMarginalLogPost(w, trajs, mdp, options):
         raise SystemExit(0)
 
     if np.isinf(post) or np.isinf(-post) or np.isnan(post):
-        print(f'ERROR: prior: %f, llh:%f, eta:%f, w:%f %f \n', prior, llh, options.eta, np.amin(w), np.amax(w)) 
+        print(f'ERROR: prior: {prior}, llh: {llh}, eta: {options.eta}, w:{np.amin(w)} {np.amax(w)} \n') 
         raise SystemExit(0)
     return post, grad
 
@@ -68,7 +72,7 @@ def multiProcess(w, trajs, mdp, options):
             # print("No occlusions found...")
             trajsCopy = copy.copy(trajs)
             trajInfo = utils.getTrajInfo(trajsCopy, mdp)
-            llh, grad1 = calcLogLLH(w, trajInfo, trajs, mdp, options)
+            llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
             grad1 = np.reshape(grad1,(mdp.nFeatures,1))
 
     return llh, grad1
@@ -89,7 +93,7 @@ def serialProcess(w, trajs, mdp, options):
                     trajsCopy[occs[o,0], occs[o,1], 0] = s
                     trajsCopy[occs[o,0], occs[o,1], 1] = a
                     trajInfo = utils.getTrajInfo(trajsCopy, mdp)
-                    mllh, mgrad1 = calcLogLLH(w, trajInfo, trajs, mdp, options)
+                    mllh, mgrad1 = calcLogLLH(w, trajInfo, mdp, options)
                     llh += mllh
                     grad1 += mgrad1
         grad1 = np.reshape(grad1,(mdp.nFeatures,1))
@@ -97,13 +101,44 @@ def serialProcess(w, trajs, mdp, options):
         # print("No occlusions found...")
         trajsCopy = copy.copy(trajs)
         trajInfo = utils.getTrajInfo(trajsCopy, mdp)
-        llh, grad1 = calcLogLLH(w, trajInfo, trajs, mdp, options)
+        llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
         grad1 = np.reshape(grad1,(mdp.nFeatures,1))
 
     return llh, grad1
 
-def calcNegLogPost(w, trajInfo, trajs, mdp, options):
-    llh, grad1 = calcLogLLH(w, trajInfo, trajs, mdp, options)
+
+def serialProcess_obsv(w, trajs, mdp, options):
+
+    llh = 0
+    grad1 = 0
+    # if(mdp.nOccs > 0):
+    #     originalInfo = utils.getOrigTrajInfo(trajs, mdp)
+    #     occs = originalInfo.occlusions
+    #     # print("Compute posterior with marginalization...")
+    #     # start_t = time.time()
+    #     for o in tqdm(range(len(occs))):
+    #         trajsCopy = copy.copy(trajs)
+    #         for s in originalInfo.allOccNxtSts[o]:
+    #             for a in range(mdp.nActions):
+    #                 trajsCopy[occs[o,0], occs[o,1], 0] = s
+    #                 trajsCopy[occs[o,0], occs[o,1], 1] = a
+    #                 trajInfo = utils.getTrajInfo(trajsCopy, mdp)
+    #                 mllh, mgrad1 = calcLogLLH(w, trajInfo, mdp, options)
+    #                 llh += mllh
+    #                 grad1 += mgrad1
+    #     grad1 = np.reshape(grad1,(mdp.nFeatures,1))
+    # else:
+
+    # print("No occlusions found...")
+    trajsCopy = copy.copy(trajs)
+    obsvs, obs_prob = utils3.getObsvInfo(trajsCopy, mdp)
+    llh, grad1 = calcLogLLH_obsv(w, obsvs, obs_prob, mdp, options)
+    grad1 = np.reshape(grad1,(mdp.nFeatures,1))
+
+    return llh, grad1
+
+def calcNegLogPost(w, trajInfo, mdp, options):
+    llh, grad1 = calcLogLLH(w, trajInfo, mdp, options)
     prior, grad2 = calcLogPrior(w, options)
     grad = grad1 + grad2
     post = prior + llh
@@ -127,7 +162,102 @@ def calcLogPrior(w, options):
         
     return prior, grad
 
-def calcLogLLH(w, trajInfo, trajs, mdp, options):
+def calcLogLLH_obsv(w, obsvs, obs_prob, mdp, options):
+
+    mdp = utils.convertW2R(w, mdp)
+    if mdp.useSparse:
+        piL, VL, QL, H = solver.policyIteration(mdp)
+    else:
+        piL, VL, QL, H = solver.piMDPToolbox(mdp)
+        # piL, VL, QL, H = solver.policyIteration(mdp)
+    dQ = calcGradQ(piL, mdp)
+    nF = mdp.nFeatures
+    nS = mdp.nStates
+    nA = mdp.nActions
+    eta = options.eta
+    nTraj = np.shape(obsvs)[0]
+    nSteps = np.shape(obsvs)[1]
+    BQ = eta * QL
+    if mdp.useSparse:
+        BQSum = np.reshape(utils2.logsumexp_row_nonzeros(BQ),(nS,1))  
+    else:
+        BQSum = np.reshape(logsumexp(BQ, axis=1),(nS,1))
+
+    NBQ = BQ
+    
+    NBQ = NBQ - BQSum
+
+    # Soft-max policy
+    pi_sto = np.exp(NBQ)  # Just pi, not log pi anymore
+
+    if mdp.sorting_behavior == 'pick_inspect':
+        start_prob = np.max(mdp.start[0])
+    else: start_prob = np.max(mdp.start[1])
+
+    sampling_quantity = 10000
+    llh = 1
+    dh_theta_sum = np.zeros(nF)
+    grad = np.ones(nF) # Calculating the gradient of the llh function
+    for t in range(nTraj):
+        t_llh = 0
+        h_theta_sum = 0
+        t_grad = np.zeros(nF) # Calculating the gradient of the llh function
+        lambda_sa = generator.sampleLambdaTrajectories(obsvs[t], sampling_quantity, np.shape(obsvs)[1], None)
+        for m in range(sampling_quantity):
+            obs_prob_prod = 1
+            h_theta = 0
+            for h in range(nSteps):
+                s = lambda_sa[m,h,0]
+                a = lambda_sa[m,h,1]
+                if obs_prob[t,h,s,a] > 0:
+                    obs_prob_prod *= obs_prob[t,h,s,a]
+                else:
+                    obs_prob_prod *= obs_prob[t,h,s,a]
+                    break
+            
+            trans_prob_prod = 1
+            pi_sto_prod = 1
+            if obs_prob_prod > 0:
+                for i in range(1,nSteps):
+                    ns = lambda_sa[m,i,0]
+                    na = lambda_sa[m,i,1]
+                    s = lambda_sa[m,i-1,0]
+                    a = lambda_sa[m,i-1,1]
+                    trans_prob_prod *= mdp.transition[ns,s,a]
+                    pi_sto_prod *= pi_sto[ns,na]
+
+                c_lambda = start_prob*obs_prob_prod*trans_prob_prod
+                h_theta = c_lambda*pi_sto_prod
+                h_theta_sum += h_theta
+                if h_theta != 0:
+                    t_llh += np.log(h_theta) 
+                dh_theta_sum += c_lambda*(calc_pi_sto_grad(lambda_sa[m], pi_sto, nF, nA, dQ))
+                t_grad = (1/h_theta_sum) * dh_theta_sum
+        llh *= t_llh
+        grad *= t_grad
+    return llh, grad
+
+def calc_pi_sto_grad(lambda_sa, pi_sto, nF, nA, dQ):
+    result = np.zeros(nF)
+    nSteps = np.shape(lambda_sa)[1]
+    for z in range(1,nSteps):
+        prod_pi = 1
+        for k in range(1,nSteps):
+            if k != z:
+                s_k = lambda_sa[k,0]
+                a_k = lambda_sa[k,1]
+                prod_pi *= pi_sto[s_k,a_k]
+        s_z = lambda_sa[z,0]
+        a_z = lambda_sa[z,1]
+        second_term = 0
+        for a in range(nA):
+            second_term += pi_sto[s_z,a]*dQ[:,s_z*a]
+        dpi = pi_sto[s_z,a_z]*(dQ[:,s_z*a_z] - second_term)
+        result += dpi*prod_pi
+    return result
+
+
+def calcLogLLH(w, trajInfo, mdp, options):
 
     mdp = utils.convertW2R(w, mdp)
     if mdp.useSparse:
@@ -150,33 +280,15 @@ def calcLogLLH(w, trajInfo, trajs, mdp, options):
     
     NBQ = NBQ - BQSum
 
+    # Soft-max policy
+    pi_sto = np.exp(NBQ)  # Just pi, not log pi anymore
+
     llh = 0
     for i in range(len(trajInfo.cnt)):
         s = trajInfo.cnt[i, 0]
         a = trajInfo.cnt[i, 1]
         n = trajInfo.cnt[i, 2]
-        onionLoc, eefLoc, pred, listIDStatus = utils3.sid2vals(s)
-        if listIDStatus == 2:
-            method = 0  # 0 - Pick-inspect-place; 1 - Roll-pick-place
-        else: 
-            method = 1
-
-        if pred != 2:
-            obsv_prob = 1 - 0.3*0.95
-        else:
-            obsv_prob = 1
-        # for m in range(trajInfo.nTrajs):
-        #     for h in range(trajInfo.nSteps):
-        #         if s == trajs[m, h, 0] and a == trajs[m, h, 1]:
-        #             if h + 1 != trajInfo.nSteps:
-        #                 ns = trajs[m, h+1, 0]
-        #                 break
-        #     ns = max(mdp.transition[:,s,a])
-
-        llh += np.log(np.nonzero(mdp.start[method])[0][0] + max(mdp.transition[:,s,a]) + obsv_prob)*n*NBQ[s, a]
-
-    # Soft-max policy
-    pi_sto = np.exp(NBQ)  # Just pi, not log pi anymore
+        llh += n*NBQ[s, a]
 
     # calculate dlogPi/dtheta ; Theta vector is just the weights.
     dlogPi = np.zeros((nF, nS * nA))
@@ -193,9 +305,8 @@ def calcLogLLH(w, trajInfo, trajs, mdp, options):
         s = trajInfo.cnt[i, 0]
         a = trajInfo.cnt[i, 1]
         n = trajInfo.cnt[i, 2]
-        j = (a) * nS + s
-        # grad += np.log(np.nonzero(mdp.start[method])[0][0] + max(mdp.transition[:,s,a]) + obsv_prob)*n*(dlogPi[:, j])
-        grad += n*(dlogPi[:, j])
+        j = (a) * nS+s
+        grad += n*dlogPi[:, j] 
     return llh, grad
 
 def calcGradQ(piL, mdp):

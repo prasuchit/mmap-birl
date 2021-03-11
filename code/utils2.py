@@ -9,7 +9,7 @@ import math
 from scipy.optimize._minimize import minimize
 from scipy.special._logsumexp import logsumexp
 
-def gradientDescent(mdp, trajs, opts, currWeight = 0, currGrad = 0, cache = []):
+def gradientDescent(mdp, trajs, problem, opts, currWeight = 0, currGrad = 0, cache = []):
     print("======== MAP Inference ========")
     print("======= Gradient Ascent =======")
     for i in range(opts.MaxIter):    # Finding this: R_new = R + δ_t * ∇_R P(R|X)
@@ -22,14 +22,14 @@ def gradientDescent(mdp, trajs, opts, currWeight = 0, currGrad = 0, cache = []):
         if opti is None:
             print("  No existing cached gradient reusable ")
             pi, H = computeOptmRegn(mdp, currWeight)
-            post, currGrad = llh.calcNegMarginalLogPost(currWeight, trajs, mdp, opts)
+            post, currGrad = llh.calcNegMarginalLogPost(currWeight, trajs, mdp, opts, problem)
             cache.append([pi, H, currGrad])
         else:
             print("  Found reusable gradient ")
             currGrad = opti[2]
     return currWeight
 
-def nesterovAccelGrad(mdp, trajs, opts, currWeight = 0, currGrad = 0, cache = []):
+def nesterovAccelGrad(mdp, trajs, problem, opts, currWeight = 0, currGrad = 0, cache = []):
     print("======== MAP Inference ========")
     print("==== Nesterov Accel Gradient ====")
     prevGrad = np.copy(currGrad)
@@ -43,7 +43,7 @@ def nesterovAccelGrad(mdp, trajs, opts, currWeight = 0, currGrad = 0, cache = []
         if opti is None:
             print("  No existing cached gradient reusable ")
             pi, H = computeOptmRegn(mdp, currWeight)
-            post, currGrad = llh.calcNegMarginalLogPost(currWeight, trajs, mdp, opts)
+            post, currGrad = llh.calcNegMarginalLogPost(currWeight, trajs, mdp, opts, problem)
             cache.append([pi, H, currGrad])
         else:
             print("  Found reusable gradient ")
@@ -53,9 +53,6 @@ def nesterovAccelGrad(mdp, trajs, opts, currWeight = 0, currGrad = 0, cache = []
         weightUpdate = np.reshape(weightUpdate,(mdp.nFeatures,1))
         currWeight = currWeight + (opts.stepsize/2 * weightUpdate)
         prevGrad = currGrad
-        # mdp = utils.convertW2R(prevGrad, mdp)
-        # piL, _, _, _ = solver.piMDPToolbox(mdp)
-        # mdp = utils3.updateObsvPrior(piL, mdp)
     return currWeight, mdp
 
 def processOccl(trajs, nS, nA, nTrajs, nSteps, discount, transition):

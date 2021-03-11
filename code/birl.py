@@ -23,7 +23,7 @@ class trajNode:
             s += '  parent: ' + str(self.parent.s) + ', ' + str(self.parent.a) + '\n'
         return s
 
-def MMAP(expertData, mdp, opts, logging=True):
+def MMAP(expertData, mdp, opts, problem, logging=True):
     trajs = expertData.trajSet
     if opts.optimizer is None:
         print('ERR: no opimizer defined.')
@@ -31,7 +31,7 @@ def MMAP(expertData, mdp, opts, logging=True):
 
     w0 = utils.sampleNewWeight(mdp.nFeatures, opts, expertData.seed)
     t0 = time.time()
-    res = minimize(llh.calcNegMarginalLogPost, w0, args=(trajs, mdp, opts), tol=1e-8, method=opts.optimizer, jac=True, options={'maxiter': 200, 'disp': opts.showMsg})
+    res = minimize(llh.calcNegMarginalLogPost, w0, args=(trajs, mdp, opts, problem), tol=1e-8, method=opts.optimizer, jac=True, options={'maxiter': 200, 'disp': opts.showMsg})
     t1 = time.time()
     runtime = t1 - t0
     wL = res.x
