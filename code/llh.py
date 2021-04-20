@@ -17,6 +17,8 @@ np.set_printoptions(threshold=np.inf)
 
 def calcNegMarginalLogPost(w, trajs, mdp, options, problem):
 
+    # mdp.nOccs = 0
+
     if not problem.obsv_noise:
         # llh, grad1 = multiProcess(w, trajs, mdp, options)
         llh, grad1 = serialProcess(w, trajs, mdp, options)
@@ -107,33 +109,31 @@ def serialProcess(w, trajs, mdp, options):
     return llh, grad1
 
 
-def serialProcess_obsv(w, trajs, mdp, options):
+def serialProcess_obsv(w, obsvs, mdp, options):
 
     llh = 0
     grad1 = 0
-    # if(mdp.nOccs > 0):
-    #     originalInfo = utils.getOrigTrajInfo(trajs, mdp)
-    #     occs = originalInfo.occlusions
-    #     # print("Compute posterior with marginalization...")
-    #     # start_t = time.time()
-    #     for o in tqdm(range(len(occs))):
-    #         trajsCopy = copy.copy(trajs)
-    #         for s in originalInfo.allOccNxtSts[o]:
-    #             for a in range(mdp.nActions):
-    #                 trajsCopy[occs[o,0], occs[o,1], 0] = s
-    #                 trajsCopy[occs[o,0], occs[o,1], 1] = a
-    #                 trajInfo = utils.getTrajInfo(trajsCopy, mdp)
-    #                 mllh, mgrad1 = calcLogLLH(w, trajInfo, mdp, options)
-    #                 llh += mllh
-    #                 grad1 += mgrad1
-    #     grad1 = np.reshape(grad1,(mdp.nFeatures,1))
-    # else:
+    obsvsCopy = copy.copy(obsvs)
+    obs_prob = utils3.getObsvInfo(obsvsCopy, mdp)
 
-    # print("No occlusions found...")
-    trajsCopy = copy.copy(trajs)
-    obsvs, obs_prob = utils3.getObsvInfo(trajsCopy, mdp)
-    llh, grad1 = calcLogLLH_obsv(w, obsvs, obs_prob, mdp, options)
-    grad1 = np.reshape(grad1,(mdp.nFeatures,1))
+    if(mdp.nOccs > 0):
+        originalInfo = utils.getOrigTrajInfo(obsvsCopy, mdp)
+        occs = originalInfo.occlusions
+        # print("Compute posterior with marginalization...")
+        # start_t = time.time()
+        for o in tqdm(range(len(occs))):
+            for s in originalInfo.allOccNxtSts[o]:
+                for a in range(mdp.nActions):
+                    obsvsCopy[occs[o,0], occs[o,1], 0] = s
+                    obsvsCopy[occs[o,0], occs[o,1], 1] = a
+                    mllh, mgrad1 = calcLogLLH_obsv(w, obsvsCopy, obs_prob, mdp, options)
+                    llh += mllh
+                    grad1 += mgrad1
+        grad1 = np.reshape(grad1,(mdp.nFeatures,1))
+    else:
+        print("No occlusions found...")
+        llh, grad1 = calcLogLLH_obsv(w, obsvsCopy, obs_prob, mdp, options)
+        grad1 = np.reshape(grad1,(mdp.nFeatures,1))
 
     return llh, grad1
 

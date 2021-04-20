@@ -19,7 +19,6 @@ def init(gridSize=12, blockSize=2, noise=0.3, discount=0.99, useSparse = 0):
     for y in range(gridSize):
         for x in range(gridSize):
             s = loc2s(x, y, gridSize)
-            # x_dash , y_dash = s2loc(s, gridSize)
             ns = np.zeros(nA).astype(int)
             ns[0] = loc2s(x, y + 1, gridSize) # N  # Creating a list of possible states you
             ns[1] = loc2s(x + 1, y, gridSize) # E  # could reach by performing the available
@@ -74,7 +73,6 @@ def loc2s(x, y, gridSize):  # Location x,y value to state num mapping
     x = max(0, min(gridSize - 1, x))
     y = max(0, min(gridSize - 1, y))
     return y * gridSize + x
-
 
 def s2loc(s, gridSize):
     """

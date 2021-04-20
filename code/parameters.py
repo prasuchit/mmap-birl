@@ -40,6 +40,9 @@ def setIRLParams(alg=None, restart=0, optimizer='Newton-CG', solverMethod= 'scip
 def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, nOccs = 0, gridSize=12, blockSize=2, nLanes=3, nSpeeds=2, 
                         sorting_behavior = 'pick_inspect', nOnionLoc = 5, nEEFLoc = 4, nPredict = 3, nlistIDStatus = 3, noise = 0.3, 
                         obsv_noise = False, seed=None, useSparse = 0):
+
+    ''' NOTE: The function arguments could be replaced by **kwargs. For future reference '''
+    
     problem = options.problem()
     problem.name = name
     problem.iters = np.arange(iters)

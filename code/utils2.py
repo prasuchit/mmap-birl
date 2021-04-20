@@ -81,7 +81,7 @@ def processOccl(trajs, nS, nA, nTrajs, nSteps, discount, transition):
 
         nxtStates = []  # This is to create a list for each occl to hold its possible states.
 
-        if(o[1] - 1 == -1): # If prev index to this occl step is not within 0th step. Meaning that the occl is at 0th step.
+        if(o[1] - 1 == -1): # If prev step to this occl step is not within 0th step. Meaning that the occl is at 0th step.
             if(o[1] + 1 < nSteps and -1 not in trajs[o[0], o[1] + 1,:]):    # Check if next step is within nSteps and isn't occluded
                 for i in range(nS):     # For all current states
                     for a in range(nA): # And all actions

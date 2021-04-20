@@ -67,7 +67,7 @@ def generateDemonstration(mdp, problem, numOccs=0):
                 raise SystemExit(0)
             for j in range(problem.nSteps):
                 if occlusions[j] == -1:
-                    trajs[i, j, 0] = occlusions[j]     # The 3rd index holds the s-a pair
+                    trajs[i, j, 0] = occlusions[j]     # The 3rd index of trajs holds the s-a pair
                     trajs[i, j, 1] = occlusions[j]     # 0 - state 1 - action
 
     expertData.trajSet = trajs
@@ -75,8 +75,10 @@ def generateDemonstration(mdp, problem, numOccs=0):
     return expertData
 
 def generateTrajectory(mdp, problem):
+
     print('Generate Demonstrations')
     nF = mdp.nFeatures
+
     if mdp.sampled is False:
         w = utils.sampleWeight(problem, nF, problem.seed)
         mdp.sampled = True
@@ -84,6 +86,7 @@ def generateTrajectory(mdp, problem):
         mdp = utils.convertW2R(w, mdp)
         print('  - assign weight to the problem')
         print(w)
+
     if problem.name == 'sorting':
         print(f'solve {mdp.name}\n')
         tic = time.time()  
@@ -115,7 +118,6 @@ def generateTrajectory(mdp, problem):
         else:
             obsvs = utils3.applyObsvProb(problem, policy, mdp)
             return obsvs, policy
-
 
 
     elif problem.name == 'gridworld':

@@ -31,8 +31,8 @@ def main():
     priorName = 'Gaussian'
     # priorName = 'Uniform'
     # probName = 'highway'
-    # probName = 'gridworld'
-    probName = 'sorting'
+    probName = 'gridworld'
+    # probName = 'sorting'
     optimMethod = 'gradAsc'
     # optimMethod = 'nesterovGrad'
     nTrajs = 1
@@ -42,16 +42,16 @@ def main():
     nEEFLoc = 4
     nPredict = 3
     nlistIDStatus = 3
-    init_gridSize = 8
+    init_gridSize = 4
     init_blockSize = 2
     init_nLanes = 3     # Highway problem
     init_nSpeeds = 2    # Highway problem
-    # init_noise = 0.3    # Gridworld transition noise
-    init_noise = 0.05   # Sorting transition noise 0.05
-    obsv_noise = True
+    init_noise = 0.3    # Gridworld transition noise
+    # init_noise = 0.05   # Sorting transition noise 0.05
+    obsv_noise = False
     sorting_behavior = 'pick_inspect'
     # sorting_behavior = 'roll_pick'
-    numOcclusions = 0
+    numOcclusions = 1
     useSparse = 0
 
     normMethod = 'None'  # 'softmax' '0-1' 'None'
