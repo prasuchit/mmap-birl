@@ -1,6 +1,7 @@
 import numpy as np
 from operator import mod
 from scipy import stats
+from gridworld import neighbouring
 import generator
 
 def sid2vals(s, nOnionLoc = 4, nEEFLoc = 4, nPredict = 3, nlistIDStatus = 3, start = None):
@@ -164,24 +165,38 @@ def getKeyFromValue(my_dict, val):
     return "key doesn't exist"
 
 def applyObsvProb(problem,policy,mdp):
-    ''' Here we synthetically generate noisy observations
-    using simulated true trajectories. We could also use SANet
-    trajectories we already have '''
+    ''' @brief  Here we synthetically generate noisy observations
+    using simulated true trajectories.'''
+    if problem.name == 'sorting':
+        # trajsSANet = np.loadtxt("trajsFromSANet.csv", dtype = int)
+        trajs, _, _ = generator.sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
+        obsvs = np.copy(trajs)
+        for m in range(problem.nTrajs):
+            for h in range(problem.nSteps):
+                s = int(trajs[m,h,0])
+                onionLoc, eefLoc, pred, listIDStatus = sid2vals(s, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus)
+                if pred != 2:
+                    # Assumptions: These need to be replaced with real world values later.
+                    # prediction that onion is bad. 95% accuracy of detection
+                    # 30% of claimable onions on conveyor are bad
+                    pp = 0.3*0.95
+                    pred = np.random.choice([pred, int(not pred)], 1, p=[1-pp, pp])[0]
+                obsvs[m,h,0] = vals2sid(onionLoc, eefLoc, pred, listIDStatus, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus)
     
-    # trajsSANet = np.loadtxt("trajsFromSANet.csv", dtype = int)
-    trajs, _, _ = generator.sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
-    obsvs = np.copy(trajs)
-    for m in range(problem.nTrajs):
-        for h in range(problem.nSteps):
-            s = int(trajs[m,h,0])
-            onionLoc, eefLoc, pred, listIDStatus = sid2vals(s, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus)
-            if pred != 2:
-                # Assumptions: These need to be replaced with real world values later.
-                # prediction that onion is bad. 95% accuracy of detection
-                # 30% of claimable onions on conveyor are bad
-                pp = 0.3*0.95
-                pred = np.random.choice([pred, int(not pred)], 1, p=[1-pp, pp])[0]
-            obsvs[m,h,0] = vals2sid(onionLoc, eefLoc, pred, listIDStatus, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus)
+    elif problem.name == 'gridworld':
+        nS = mdp.nStates
+        trajs, _, _ = generator.sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
+        obsvs = np.copy(trajs)
+        for m in range(problem.nTrajs):
+            for h in range(problem.nSteps):
+                s = int(trajs[m,h,0])
+                for k in range(nS):
+                    if neighbouring(s,k, mdp.gridSize) and s != k:
+                        pp = 0.25    # With a 25% chance we see the agent in one of the neighbouring states.
+                        s = np.random.choice([s, k], 1, p=[1-pp, pp])[0]
+                        break
+                obsvs[m,h,0] = s
+
     return obsvs
 
 def getObsvInfo(obsvs, mdp):
@@ -195,13 +210,20 @@ def getObsvInfo(obsvs, mdp):
         for h in range(nSteps):
             s = obsvsCopy[m,h,0]
             a = obsvsCopy[m,h,1]
-            onionLoc, eefLoc, pred, listIDStatus = sid2vals(s)
-            s_noisy = vals2sid(onionLoc, eefLoc, int(not pred), listIDStatus)
-            if pred != 2:
-                pp = 0.3*0.95
-                obs_prob[m,h,s_noisy,a] = pp
-                obs_prob[m,h,s,a] = 1 - pp
-            else:
-                obs_prob[m,h,s,a] = 1
-            
+            if mdp.name == 'sorting':
+                onionLoc, eefLoc, pred, listIDStatus = sid2vals(s)
+                s_noisy = vals2sid(onionLoc, eefLoc, int(not pred), listIDStatus)
+                if pred != 2:
+                    pp = 0.3*0.95
+                    obs_prob[m,h,s_noisy,a] = pp
+                    obs_prob[m,h,s,a] = 1 - pp
+                else:
+                    obs_prob[m,h,s,a] = 1
+            elif mdp.name == 'gridworld':
+                if s != -1:
+                    for k in range(nS):
+                        if neighbouring(s,k, mdp.gridSize) and s != k:
+                            pp = 0.3
+                            obs_prob[m,h,k,a] = pp # 30% chance that we got a neighbouring state instead.
+                            obs_prob[m,h,s,a] = 1 - pp        
     return obs_prob

@@ -10,16 +10,16 @@ np.seterr(divide='ignore', invalid='ignore')
 
 def init(gridSize=12, blockSize=2, noise=0.3, discount=0.99, useSparse = 0):
     mdp = models.mdp()
-    mdp.name = ''
 
     nS = gridSize * gridSize 
     nA = 4
-    nF = int(math.pow(gridSize/blockSize, 2))
+    # nF = int(math.pow(gridSize/blockSize, 2))
+    nF = 3
     T = np.zeros((nS, nS, nA))
     for y in range(gridSize):
         for x in range(gridSize):
             s = loc2s(x, y, gridSize)
-            # x_dash , y_dash = s2loc(s, gridSize)
+            # x , y = s2loc(s, gridSize)
             ns = np.zeros(nA).astype(int)
             ns[0] = loc2s(x, y + 1, gridSize) # N  # Creating a list of possible states you
             ns[1] = loc2s(x + 1, y, gridSize) # E  # could reach by performing the available
@@ -37,13 +37,26 @@ def init(gridSize=12, blockSize=2, noise=0.3, discount=0.99, useSparse = 0):
             s = loc2s(x, y, gridSize)
             i = math.floor(x / blockSize)
             j = math.floor(y / blockSize)
-            f = loc2s(i, j, int(gridSize/blockSize))    
-            F[s, f] = 1
+            f = loc2s(i, j, int(gridSize/blockSize)) 
+            # F[s, f] = 1
+            if s == 6:
+                F[s,0] = 1
+            elif s == 11:
+                F[s,1] = 1
+            elif s == 15:
+                F[s,2] = 1
 
+
+    # for i in range(nS):
+    #     np.savetxt("state"+str(i)+".csv", np.round(T[:,i,:], 4), delimiter=",")
 
     start = np.ones((nS, 1))
-    start = start / np.sum(start)
-    mdp.name = 'gridworld_' + str(gridSize) + 'x' + str(blockSize)
+    start = start / (np.sum(start) - 3) # Excluding the prob of the 3 below states.
+    start[6] = 0    # Pond
+    start[11] = 0   # Bad state
+    start[15] = 0   # Goal state
+    # forest_cover = [3, 4, 11]
+    mdp.name = 'gridworld'
     mdp.gridSize = gridSize
     mdp.blockSize = blockSize
     mdp.nStates = nS
@@ -57,6 +70,7 @@ def init(gridSize=12, blockSize=2, noise=0.3, discount=0.99, useSparse = 0):
     mdp.reward = np.reshape(np.matmul(mdp.F,mdp.weight), (nS, nA))
     mdp.useSparse = useSparse
     mdp.sampled = False
+    # mdp.forest_cover = forest_cover
 
     if mdp.useSparse:
         mdp.transitionS = {}
@@ -84,3 +98,16 @@ def s2loc(s, gridSize):
     -> (x, y) int tuple.
     """
     return (s % gridSize, s // gridSize)
+
+def neighbouring(i, k, gridSize):
+        """
+        Get whether two points neighbour each other. Also returns true if they
+        are the same point.
+
+        i: state id.
+        k: state id.
+        -> bool.
+        """
+        i = s2loc(i, gridSize)
+        k = s2loc(k, gridSize)
+        return abs(i[0] - k[0]) + abs(i[1] - k[1]) <= 1

@@ -59,6 +59,9 @@ def generateDemonstration(mdp, problem, numOccs=0):
         for i in range(problem.nTrajs):
             try:
                 occlusions = np.zeros(expertData.nSteps)
+                # if mdp.name == 'gridworld':
+                #     pass    # We'll do this based on specific states a little below.
+                # else:
                 occlusions[random.sample(range(problem.nSteps), numOccs)] = -1
                 # occlusions[1 + np.arange(int(expertData.nSteps/3))] = -1
                 # occlusions[(expertData.nSteps - 2) - np.arange(int(expertData.nSteps/3))] = -1
@@ -66,6 +69,11 @@ def generateDemonstration(mdp, problem, numOccs=0):
                 print("ERROR: Number of occlusions exceed total number of steps. Exiting!")
                 raise SystemExit(0)
             for j in range(problem.nSteps):
+                # if mdp.name == 'gridworld':
+                #     if trajs[i, j, 0] in mdp.forest_cover:
+                #         trajs[i, j, 0] = -1     # The 3rd index of trajs holds the s-a pair
+                #         trajs[i, j, 1] = -1     # 0 - state 1 - action
+                # else:
                 if occlusions[j] == -1:
                     trajs[i, j, 0] = occlusions[j]     # The 3rd index of trajs holds the s-a pair
                     trajs[i, j, 1] = occlusions[j]     # 0 - state 1 - action
@@ -129,21 +137,20 @@ def generateTrajectory(mdp, problem):
 
         optValue = np.dot(np.transpose(mdp.start), value)
 
-        if mdp.useSparse:
-            print(' - Optimal value : ', (optValue[0,0]))
+        if not problem.obsv_noise:
+            if mdp.useSparse:
+                meanThreshold = 1
+                varThreshold = 1
+                while True:
+                    trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
+                    if abs(abs(optValue[0,0]) - abs(trajVmean)) < meanThreshold and trajVvar < varThreshold:
+                        break
+            else:
+                trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
+            print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
         else:
-            print(' - Optimal value : %.4f' % (optValue))
-        
-        if mdp.useSparse:
-            meanThreshold = 1
-            varThreshold = 1
-            while True:
-                trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
-                if abs(optValue[0,0] - trajVmean) < meanThreshold and trajVvar < varThreshold:
-                    break
-        else:
-            trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
-        print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
+            obsvs = utils3.applyObsvProb(problem, policy, mdp)
+            return obsvs, policy
 
     elif problem.name == 'highway':
         print(f'solve {mdp.name}\n')
@@ -206,17 +213,18 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None, sorting_behavior =
         # np.random.seed(seed)
         np.random.seed(None)
     else:
-        np.random.seed(None)
+        np.random.seed(seed)
+        # np.random.seed(None)
     for m in range(nTrajs):
         if mdp.useSparse:
-            arr = np.array((mdp.start).todense())
+            start = np.array((mdp.start).todense())
             if mdp.name == 'sorting':
                 if sorting_behavior == 'pick_inspect':
                     sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start[0], (mdp.nStates)))
                 else:
                     sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start[1], (mdp.nStates)))
             else:
-                sample = np.random.multinomial(n=1, pvals=np.reshape(arr, arr.size))
+                sample = np.random.multinomial(n=1, pvals=np.reshape(start, start.size))
         else:
             if mdp.name == 'sorting':
                 if sorting_behavior == 'pick_inspect':
@@ -249,19 +257,40 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None, sorting_behavior =
     return trajs, Vmean, Vvar 
 
 
-def sampleLambdaTrajectories(traj, nTrajs, nSteps, seed = None):
+def sampleLambdaTrajectories(mdp, traj, nTrajs, nSteps, seed = None):
 
     lamdatrajs = np.zeros((nTrajs, nSteps, 2)).astype(int)
     np.random.seed(seed)
+    nS = mdp.nStates
     for m in range(nTrajs):
         for h in range(nSteps):
             s = int(traj[h,0])
             a = int(traj[h,1])
-            onionLoc, eefLoc, pred, listIDStatus = utils3.sid2vals(s)
-            if pred != 2:
-                pred = np.random.choice([pred, int(not pred)], 1)[0]
-            lamdatrajs[m,h,0] = utils3.vals2sid(onionLoc, eefLoc, pred, listIDStatus)
-            lamdatrajs[m,h,1] = a
+            if h != nSteps - 1:
+                ns = int(traj[h+1,0])
+            if mdp.name =='sorting':
+                if s != -1:
+                    onionLoc, eefLoc, pred, listIDStatus = utils3.sid2vals(s)
+                    if pred != 2:
+                        pred = np.random.choice([pred, int(not pred)], 1)[0]
+                    lamdatrajs[m,h,0] = utils3.vals2sid(onionLoc, eefLoc, pred, listIDStatus)
+                    lamdatrajs[m,h,1] = a
+                else:
+                    lamdatrajs[m,h,0] = s
+                    lamdatrajs[m,h,1] = a
+
+            elif mdp.name == 'gridworld':
+                neighbours = []
+                if s != -1:
+                    for k in range(nS):
+                        if gridworld.neighbouring(s,k, mdp.gridSize) and (k not in neighbours):
+                            neighbours.append(k)
+                        
+                    lamdatrajs[m,h,0] = np.random.choice(neighbours, 1)[0]
+                    lamdatrajs[m,h,1] = a 
+                else:
+                    lamdatrajs[m,h,0] = s
+                    lamdatrajs[m,h,1] = a
     return lamdatrajs
 
 def sampleMultinomial(dist, seed):

@@ -20,10 +20,10 @@ def calcNegMarginalLogPost(w, trajs, mdp, options, problem):
     # mdp.nOccs = 0
 
     if not problem.obsv_noise:
-        # llh, grad1 = multiProcess(w, trajs, mdp, options)
+        # llh, grad1 = parallelProcess(w, trajs, mdp, options)
         llh, grad1 = serialProcess(w, trajs, mdp, options)
     else:
-        # llh, grad1 = multiProcess_obsv(w, trajs, mdp, options)    # This hasn't been built yet.
+        # llh, grad1 = parallelProcess_obsv(w, trajs, mdp, options)    # This hasn't been built yet.
         llh, grad1 = serialProcess_obsv(w, trajs, mdp, options)
     prior, grad2 = calcLogPrior(w, options)
     grad2 = np.reshape(grad2,(mdp.nFeatures,1))
@@ -44,10 +44,10 @@ def calcNegMarginalLogPost(w, trajs, mdp, options, problem):
         raise SystemExit(0)
     return post, grad
 
-def multiProcess(w, trajs, mdp, options):
+def parallelProcess(w, trajs, mdp, options):
 
     llh = 0
-    grad1 = 0
+    grad1 = np.zeros(mdp.nFeatures)
     mresult = []
     with Pool(processes = 5) as pool:
         if(mdp.nOccs > 0):
@@ -82,7 +82,7 @@ def multiProcess(w, trajs, mdp, options):
 def serialProcess(w, trajs, mdp, options):
 
     llh = 0
-    grad1 = 0
+    grad1 = np.zeros(mdp.nFeatures)
     if(mdp.nOccs > 0):
         originalInfo = utils.getOrigTrajInfo(trajs, mdp)
         occs = originalInfo.occlusions
@@ -109,10 +109,43 @@ def serialProcess(w, trajs, mdp, options):
     return llh, grad1
 
 
+def parallelProcess_obsv(w, obsvs, mdp, options):
+
+    llh = 0
+    grad1 = np.zeros(mdp.nFeatures)
+    mresult = []
+    obsvsCopy = copy.copy(obsvs)
+    obs_prob = utils3.getObsvInfo(obsvsCopy, mdp)
+
+    with Pool(processes = 5) as pool:
+        if(mdp.nOccs > 0):
+            originalInfo = utils.getOrigTrajInfo(obsvsCopy, mdp)
+            occs = originalInfo.occlusions
+            # print("Compute posterior with marginalization...")
+            # start_t = time.time()
+            for o in tqdm(range(len(occs))):
+                for s in originalInfo.allOccNxtSts[o]:
+                    for a in range(mdp.nActions):
+                        obsvsCopy[occs[o,0], occs[o,1], 0] = s
+                        obsvsCopy[occs[o,0], occs[o,1], 1] = a
+                        mresult.append(pool.apply_async(calcLogLLH_obsv, (w, obsvsCopy, obs_prob, mdp, options)))
+
+            for i in tqdm(range(len(mresult))):
+                mllh, mgrad1 = mresult[i].get()
+                llh += mllh
+                grad1 += mgrad1
+            grad1 = np.reshape(grad1,(mdp.nFeatures,1))
+        else:
+            print("No occlusions found...")
+            llh, grad1 = calcLogLLH_obsv(w, obsvsCopy, obs_prob, mdp, options)
+            grad1 = np.reshape(grad1,(mdp.nFeatures,1))
+
+        return llh, grad1
+
 def serialProcess_obsv(w, obsvs, mdp, options):
 
     llh = 0
-    grad1 = 0
+    grad1 = np.zeros(mdp.nFeatures)
     obsvsCopy = copy.copy(obsvs)
     obs_prob = utils3.getObsvInfo(obsvsCopy, mdp)
 
@@ -190,19 +223,21 @@ def calcLogLLH_obsv(w, obsvs, obs_prob, mdp, options):
     # Soft-max policy
     pi_sto = np.exp(NBQ)  # Just pi, not log pi anymore
 
-    if mdp.sorting_behavior == 'pick_inspect':
-        start_prob = np.max(mdp.start[0])
-    else: start_prob = np.max(mdp.start[1])
+    if mdp.name == 'sorting':
+        if mdp.sorting_behavior == 'pick_inspect':
+            start_prob = np.max(mdp.start[0])
+        else: start_prob = np.max(mdp.start[1])
+    else: start_prob = np.max(mdp.start)
 
-    sampling_quantity = 10000
-    llh = 1
+    sampling_quantity = 1000
+    llh = 0
+    grad = np.zeros(nF) # Calculating the gradient of the llh function
     dh_theta_sum = np.zeros(nF)
-    grad = np.ones(nF) # Calculating the gradient of the llh function
     for t in range(nTraj):
         t_llh = 0
+        t_grad = np.zeros(nF) 
         h_theta_sum = 0
-        t_grad = np.zeros(nF) # Calculating the gradient of the llh function
-        lambda_sa = generator.sampleLambdaTrajectories(obsvs[t], sampling_quantity, np.shape(obsvs)[1], None)
+        lambda_sa = generator.sampleLambdaTrajectories(mdp, obsvs[t], sampling_quantity, np.shape(obsvs)[1], None)
         for m in range(sampling_quantity):
             obs_prob_prod = 1
             h_theta = 0
@@ -226,15 +261,16 @@ def calcLogLLH_obsv(w, obsvs, obs_prob, mdp, options):
                     trans_prob_prod *= mdp.transition[ns,s,a]
                     pi_sto_prod *= pi_sto[ns,na]
 
-                c_lambda = start_prob*obs_prob_prod*trans_prob_prod
-                h_theta = c_lambda*pi_sto_prod
-                h_theta_sum += h_theta
-                if h_theta != 0:
-                    t_llh += np.log(h_theta) 
-                dh_theta_sum += c_lambda*(calc_pi_sto_grad(lambda_sa[m], pi_sto, nF, nA, dQ))
-                t_grad = (1/h_theta_sum) * dh_theta_sum
-        llh *= t_llh
-        grad *= t_grad
+                if trans_prob_prod > 0:
+                    c_lambda = start_prob*obs_prob_prod*trans_prob_prod
+                    h_theta = c_lambda*pi_sto_prod
+                    h_theta_sum += h_theta
+                    if h_theta != 0:
+                        t_llh += np.log(h_theta) 
+                    dh_theta_sum += c_lambda*(calc_pi_sto_grad(lambda_sa[m], pi_sto, nF, nA, dQ))
+                    t_grad = (1/h_theta_sum) * dh_theta_sum
+        llh += t_llh
+        grad += t_grad
     return llh, grad
 
 def calc_pi_sto_grad(lambda_sa, pi_sto, nF, nA, dQ):
@@ -255,7 +291,6 @@ def calc_pi_sto_grad(lambda_sa, pi_sto, nF, nA, dQ):
         dpi = pi_sto[s_z,a_z]*(dQ[:,s_z*a_z] - second_term)
         result += dpi*prod_pi
     return result
-
 
 def calcLogLLH(w, trajInfo, mdp, options):
 

@@ -37,10 +37,10 @@ def sampleWeight(problem, nF, seed=None):
     if problem.name == 'gridworld':
         if i == 0:  # Random behaviour
             w = np.random.rand(nF, 1)
-        else:   # Reaching last state is most preferred
-            w[:] = -0.1
-            w[-1] = 1
-            # w = np.reshape(np.array([[0.        ],  [0.58778302], [0.78240758],  [1.        ]]), (nF,1))
+        else:   # Forestworld weights
+            w[0] = -0.5
+            w[1] = -1
+            w[2] = 0.1
     elif problem.name == 'highway':
         # weights are assigned 1 for collision, n for nlanes, 1 for high speed
         if i == 1:              # fast driver avoids collisions and prefers high speed
@@ -215,8 +215,8 @@ def getTrajInfo(trajs, mdp):
     return trajInfo
 
 def sampleNewWeight(dims, options, seed=None):
-    # np.random.seed(seed)
-    np.random.seed(None)
+    np.random.seed(seed)
+    # np.random.seed(None)
     lb = options.lb 
     ub = options.ub    
     if options.priorType == 'Gaussian':

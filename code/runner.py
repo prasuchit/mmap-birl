@@ -36,8 +36,8 @@ def main():
     optimMethod = 'gradAsc'
     # optimMethod = 'nesterovGrad'
     nTrajs = 1
-    nSteps = 10
-    problemSeed = 1
+    nSteps = 5
+    problemSeed = None
     nOnionLoc = 4
     nEEFLoc = 4
     nPredict = 3
@@ -46,12 +46,12 @@ def main():
     init_blockSize = 2
     init_nLanes = 3     # Highway problem
     init_nSpeeds = 2    # Highway problem
-    init_noise = 0.3    # Gridworld transition noise
+    init_noise = 0.1    # Gridworld transition noise
     # init_noise = 0.05   # Sorting transition noise 0.05
-    obsv_noise = False
+    obsv_noise = True
     sorting_behavior = 'pick_inspect'
     # sorting_behavior = 'roll_pick'
-    numOcclusions = 1
+    numOcclusions = 0   # 4 occl constant for Forestworld
     useSparse = 0
 
     normMethod = 'None'  # 'softmax' '0-1' 'None'
@@ -119,7 +119,8 @@ def main():
             rewardDiff, valueDiff, policyDiff, piL, piE = utils2.computeResults(
                 expertData, mdp, wL)
 
-            if(policyDiff > 0.3 or valueDiff > 4):
+            # if(policyDiff > 0.3 or valueDiff > 4):
+            if valueDiff >= 0.2:    # This is for 4x4 gridworld
                 print(
                     f"Rerunning for better results!\nValue Diff: {valueDiff.squeeze()} | Policy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
                 opts.restart += 1
