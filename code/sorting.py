@@ -57,7 +57,7 @@ def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, sorting_behavior, discount
                     else:
                         T[91, s, a] = 1   # If next state is valid send it to the sink
                 else:
-                    if not (utils3.isValidState(onionLoc, eefLoc, pred, listidstatus)):  # Invalid actions
+                    if not (utils3.isValidState(onionLoc, eefLoc, pred, listidstatus)):  # Invalid state
                         if not (utils3.isValidNxtState(a, nxtS[0], nxtS[1], nxtS[2], nxtS[3])):
                             T[ns, s, a] = 1
                         else:
