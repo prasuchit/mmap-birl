@@ -64,7 +64,7 @@ def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, sorting_behavior, discount
                             if i != 91:
                                 T[i, s, a] = 0.1/(nS-1) # Just to prevent any state from having det transitions
                 else:
-                    if not (utils3.isValidState(onionLoc, eefLoc, pred, listidstatus)):  # Invalid actions
+                    if not (utils3.isValidState(onionLoc, eefLoc, pred, listidstatus)):  # Invalid state
                         if not (utils3.isValidNxtState(a, nxtS[0], nxtS[1], nxtS[2], nxtS[3])):
                             T[ns, s, a] = 0.9
                             for i in range(nS):
