@@ -7,8 +7,10 @@ import utils3
 import gridworld
 import highway3
 import sorting
+import yaml_utils as yu
 import random
 import time
+import copy
 from scipy import sparse
 np.seterr(divide='ignore', invalid='ignore')
 
@@ -79,6 +81,7 @@ def generateDemonstration(mdp, problem, numOccs=0):
                     trajs[i, j, 1] = occlusions[j]     # 0 - state 1 - action
 
     expertData.trajSet = trajs
+    yu.YAMLGenerator(mdp, expertData).writeVals()
 
     return expertData
 
@@ -264,33 +267,28 @@ def sampleLambdaTrajectories(mdp, traj, nTrajs, nSteps, seed = None):
     nS = mdp.nStates
     for m in range(nTrajs):
         for h in range(nSteps):
-            s = int(traj[h,0])
-            a = int(traj[h,1])
-            if h != nSteps - 1:
-                ns = int(traj[h+1,0])
-            if mdp.name =='sorting':
-                if s != -1:
+            if h > 0:
+                ps = copy.copy(int(traj[h-1,0]))
+            s = copy.copy(int(traj[h,0]))
+            a = copy.copy(int(traj[h,1]))
+            if s != -1:
+                if mdp.name =='sorting':
                     onionLoc, eefLoc, pred, listIDStatus = utils3.sid2vals(s)
                     if pred != 2:
                         pred = np.random.choice([pred, int(not pred)], 1)[0]
                     lamdatrajs[m,h,0] = utils3.vals2sid(onionLoc, eefLoc, pred, listIDStatus)
                     lamdatrajs[m,h,1] = a
-                else:
-                    lamdatrajs[m,h,0] = s
-                    lamdatrajs[m,h,1] = a
 
-            elif mdp.name == 'gridworld':
-                neighbours = []
-                if s != -1:
-                    for k in range(nS):
-                        if gridworld.neighbouring(s,k, mdp.gridSize) and (k not in neighbours):
-                            neighbours.append(k)
-                        
-                    lamdatrajs[m,h,0] = np.random.choice(neighbours, 1)[0]
-                    lamdatrajs[m,h,1] = a 
-                else:
-                    lamdatrajs[m,h,0] = s
-                    lamdatrajs[m,h,1] = a
+                elif mdp.name == 'gridworld':
+                    if h > 0 and s == 14 and ps != 13:
+                        lamdatrajs[m,h,0] = np.random.choice([s, 15], 1)[0]
+                        lamdatrajs[m,h,1] = a 
+                    else:
+                        lamdatrajs[m,h,0] = s
+                        lamdatrajs[m,h,1] = a
+            else:
+                lamdatrajs[m,h,0] = s
+                lamdatrajs[m,h,1] = a
     return lamdatrajs
 
 def sampleMultinomial(dist, seed):

@@ -20,9 +20,10 @@ import time
 ''' For pick inspect, correct policy should have:
         140 - 3 # Pick
         143 - 0 # Inspect
+        If 111 -  or 136 - 3
         101 - 2 # bad onion place in bin
-        117 - 1 # good onion place on conv  # This is where the behaviors split off. With pick inspect, roll's 
         138 - 4 # Claim after putting in bin
+        117 - 1 # good onion place on conv  # This is where the behaviors split off. With pick inspect, roll's 
         128 - 4 # Claim after putting on conv
     For roll pick, correct policy should have:
         44 - 5  # Roll
@@ -53,16 +54,28 @@ def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, sorting_behavior, discount
                 
                 if a not in actidx:     # If action is invalid
                     if not (utils3.isValidNxtState(a, nxtS[0], nxtS[1], nxtS[2], nxtS[3])):
-                        T[ns, s, a] = 1
+                        T[ns, s, a] = 0.9
+                        for i in range(nS):
+                            if i != ns:
+                                T[i, s, a] = 0.1/(nS-1) # Just to prevent any state from having det transitions
                     else:
-                        T[91, s, a] = 1   # If next state is valid send it to the sink
+                        T[91, s, a] = 0.9   # If next state is valid send it to the sink
+                        for i in range(nS):
+                            if i != 91:
+                                T[i, s, a] = 0.1/(nS-1) # Just to prevent any state from having det transitions
                 else:
                     if not (utils3.isValidState(onionLoc, eefLoc, pred, listidstatus)):  # Invalid actions
                         if not (utils3.isValidNxtState(a, nxtS[0], nxtS[1], nxtS[2], nxtS[3])):
-                            T[ns, s, a] = 1
+                            T[ns, s, a] = 0.9
+                            for i in range(nS):
+                                if i != ns:
+                                    T[i, s, a] = 0.1/(nS-1) # Just to prevent any state from having det transitions
                         else:
                             # Valid actions in invalid states leading to valid next states become a sink
-                            T[91, s, a] = 1   # If next state is valid
+                            T[91, s, a] = 0.9   # If next state is valid
+                            for i in range(nS):
+                                if i != 91:
+                                    T[i, s, a] = 0.1/(nS-1) # Just to prevent any state from having det transitions
                     else:
                         # Valid action in a valid state leading to a valid next state also has a
                         # small failure rate given by noise.
@@ -114,8 +127,8 @@ def init(nOnionLoc, nEEFLoc, nPredict, nlistIDStatus, sorting_behavior, discount
                 print(f"T(:,{s},{a}) = {T[:, s, a]}")
                 print('ERROR: \n', s, a, np.sum(T[:, s, a]))
 
-    start[0] = start[0] / np.sum(start[0])
-    start[1] = start[1] / np.sum(start[1])
+    start[0] = start[0] / np.sum(start[0])  # Pick inspect
+    start[1] = start[1] / np.sum(start[1])  # Roll pick
     mdp = models.mdp()
     mdp.name = 'sorting'
     mdp.nStates = nS

@@ -228,6 +228,9 @@ def sampleNewWeight(dims, options, seed=None):
         cov = np.eye(dims) * options.sigma
         w0 = np.clip(np.random.multivariate_normal(mean, cov), a_min=lb, a_max=ub).reshape((dims, 1))
 
+        ''' Good weight(s) for testing Forestworld ''' 
+        # w0 = np.array([[-1.        ],  [-1.        ],  [-1.     ]])
+
         ''' Good weight(s) for testing 5 traj 10 steps 0 occl nGrid 4 HIGHWAY ''' 
         # w0 = np.array([[ 1.        ], [-0.01359188], [ 0.38688691], [-0.04321886], [-0.07878083], [-0.85341881]])
         # w0 = np.array([[-0.99809947], [ 0.4281479 ], [ 0.4476873 ], [-0.7242095 ], [-0.69139168], [-0.97459464]])

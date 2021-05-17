@@ -224,12 +224,14 @@ def calcLogLLH_obsv(w, obsvs, obs_prob, mdp, options):
     pi_sto = np.exp(NBQ)  # Just pi, not log pi anymore
 
     if mdp.name == 'sorting':
+        sampling_quantity = 1000
         if mdp.sorting_behavior == 'pick_inspect':
             start_prob = np.max(mdp.start[0])
         else: start_prob = np.max(mdp.start[1])
-    else: start_prob = np.max(mdp.start)
+    else: 
+        sampling_quantity = 100
+        start_prob = np.max(mdp.start)
 
-    sampling_quantity = 1000
     llh = 0
     grad = np.zeros(nF) # Calculating the gradient of the llh function
     dh_theta_sum = np.zeros(nF)

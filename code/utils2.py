@@ -133,7 +133,7 @@ def processOccl(trajs, nS, nA, nTrajs, nSteps, discount, transition):
                     tempList = []
                     p = h
                     while(-1 in trajs[m,p,:] and -1 in trajs[m,p-1,:]):
-                        occIndex = occlusions.index([m,p])
+                        occIndex = occlusions.index([m,h])
                         for s in allOccNxtSts[occIndex]:
                             for i in range(nS): # For all next states
                                 for a in range(nA):     # And all actions
@@ -191,6 +191,7 @@ def piInterpretation(policy, name):
 
 def computeResults(expertData, mdp, wL):
 
+    # wL = np.array([-1.95237, -3.35806, 0.850548])
     mdp = utils.convertW2R(expertData.weight, mdp)
     if mdp.useSparse:
         piE, VE, QE, HE = solver.policyIteration(mdp)

@@ -116,7 +116,7 @@ def findNxtStates(onionLoc, eefLoc, pred, listidstatus, a):
         return [[3, 3, pred, listidstatus]]
     elif a == 4:
         ''' ClaimNewOnion '''
-        return [[0, eefLoc, 2, 2]]
+        return [[0, 3, 2, 2]]
     elif a == 5:
         ''' InspectWithoutPicking '''
         # cannot apply this action if a list is already available
@@ -190,11 +190,9 @@ def applyObsvProb(problem,policy,mdp):
         for m in range(problem.nTrajs):
             for h in range(problem.nSteps):
                 s = int(trajs[m,h,0])
-                for k in range(nS):
-                    if neighbouring(s,k, mdp.gridSize) and s != k:
-                        pp = 0.25    # With a 25% chance we see the agent in one of the neighbouring states.
-                        s = np.random.choice([s, k], 1, p=[1-pp, pp])[0]
-                        break
+                if s == 15:
+                    pp = 0.2    # With a 40% chance we see the agent in 14th state if he's in the goal state.
+                    s = np.random.choice([s, 14], 1, p=[1-pp, pp])[0]
                 obsvs[m,h,0] = s
 
     return obsvs
@@ -210,20 +208,21 @@ def getObsvInfo(obsvs, mdp):
         for h in range(nSteps):
             s = obsvsCopy[m,h,0]
             a = obsvsCopy[m,h,1]
-            if mdp.name == 'sorting':
-                onionLoc, eefLoc, pred, listIDStatus = sid2vals(s)
-                s_noisy = vals2sid(onionLoc, eefLoc, int(not pred), listIDStatus)
-                if pred != 2:
-                    pp = 0.3*0.95
-                    obs_prob[m,h,s_noisy,a] = pp
-                    obs_prob[m,h,s,a] = 1 - pp
-                else:
-                    obs_prob[m,h,s,a] = 1
-            elif mdp.name == 'gridworld':
-                if s != -1:
-                    for k in range(nS):
-                        if neighbouring(s,k, mdp.gridSize) and s != k:
-                            pp = 0.3
-                            obs_prob[m,h,k,a] = pp # 30% chance that we got a neighbouring state instead.
-                            obs_prob[m,h,s,a] = 1 - pp        
+            if s != -1:
+                if mdp.name == 'sorting':
+                    onionLoc, eefLoc, pred, listIDStatus = sid2vals(s)
+                    s_noisy = vals2sid(onionLoc, eefLoc, int(not pred), listIDStatus)
+                    if pred != 2:
+                        pp = 0.3*0.95
+                        obs_prob[m,h,s_noisy,a] = pp
+                        obs_prob[m,h,s,a] = 1 - pp
+                    else:
+                        obs_prob[m,h,s,a] = 1
+                elif mdp.name == 'gridworld':
+                        if s == 15:
+                            pp = 0.2
+                            obs_prob[m,h,14,a] = pp # 40% chance that we got state 14 instead.
+                            obs_prob[m,h,s,a] = 1 - pp    
+                        else:
+                            obs_prob[m,h,s,a] = 1
     return obs_prob

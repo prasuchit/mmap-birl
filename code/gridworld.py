@@ -46,10 +46,6 @@ def init(gridSize=12, blockSize=2, noise=0.3, discount=0.99, useSparse = 0):
             elif s == 15:
                 F[s,2] = 1
 
-
-    # for i in range(nS):
-    #     np.savetxt("state"+str(i)+".csv", np.round(T[:,i,:], 4), delimiter=",")
-
     start = np.ones((nS, 1))
     start = start / (np.sum(start) - 3) # Excluding the prob of the 3 below states.
     start[6] = 0    # Pond
