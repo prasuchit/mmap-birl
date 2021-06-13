@@ -35,8 +35,8 @@ def main():
     probName = 'sorting'
     optimMethod = 'gradAsc'
     # optimMethod = 'nesterovGrad'
-    nTrajs = 1
-    nSteps = 50
+    nTrajs = 12
+    nSteps = 10
     problemSeed = None
     nOnionLoc = 4
     nEEFLoc = 4
@@ -50,7 +50,7 @@ def main():
     obsv_noise = True
     sorting_behavior = 'pick_inspect'
     # sorting_behavior = 'roll_pick'
-    numOcclusions = 10  # 4 occl constant for Forestworld
+    numOcclusions = 9  # 4 occl constant for Forestworld
     useSparse = 0
 
     normMethod = 'None'  # 'softmax' '0-1' 'None'
@@ -118,8 +118,9 @@ def main():
             rewardDiff, valueDiff, policyDiff, piL, piE = utils2.computeResults(
                 expertData, mdp, wL)
 
-            # if(policyDiff > 0.3 or valueDiff > 4):
-            if valueDiff >= 0.2:    # This is for 4x4 gridworld
+            # if(policyDiff >= 0.5 or valueDiff > 5):
+            # if valueDiff >= 0.2:    # This is for 4x4 gridworld
+            if valueDiff >= 200:    # This is for 4x4 gridworld
                 print(
                     f"Rerunning for better results!\nValue Diff: {valueDiff.squeeze()} | Policy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
                 opts.restart += 1

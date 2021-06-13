@@ -224,7 +224,7 @@ def calcLogLLH_obsv(w, obsvs, obs_prob, mdp, options):
     pi_sto = np.exp(NBQ)  # Just pi, not log pi anymore
 
     if mdp.name == 'sorting':
-        sampling_quantity = 1000
+        sampling_quantity = 100
         if mdp.sorting_behavior == 'pick_inspect':
             start_prob = np.max(mdp.start[0])
         else: start_prob = np.max(mdp.start[1])
@@ -239,13 +239,13 @@ def calcLogLLH_obsv(w, obsvs, obs_prob, mdp, options):
         t_llh = 0
         t_grad = np.zeros(nF) 
         h_theta_sum = 0
-        lambda_sa = generator.sampleLambdaTrajectories(mdp, obsvs[t], sampling_quantity, np.shape(obsvs)[1], None)
+        tau_sa = generator.sampleTauTrajectories(mdp, obsvs[t], sampling_quantity, np.shape(obsvs)[1], None)
         for m in range(sampling_quantity):
             obs_prob_prod = 1
             h_theta = 0
             for h in range(nSteps):
-                s = lambda_sa[m,h,0]
-                a = lambda_sa[m,h,1]
+                s = tau_sa[m,h,0]
+                a = tau_sa[m,h,1]
                 if obs_prob[t,h,s,a] > 0:
                     obs_prob_prod *= obs_prob[t,h,s,a]
                 else:
@@ -256,37 +256,37 @@ def calcLogLLH_obsv(w, obsvs, obs_prob, mdp, options):
             pi_sto_prod = 1
             if obs_prob_prod > 0:
                 for i in range(1,nSteps):
-                    ns = lambda_sa[m,i,0]
-                    na = lambda_sa[m,i,1]
-                    s = lambda_sa[m,i-1,0]
-                    a = lambda_sa[m,i-1,1]
+                    ns = tau_sa[m,i,0]
+                    na = tau_sa[m,i,1]
+                    s = tau_sa[m,i-1,0]
+                    a = tau_sa[m,i-1,1]
                     trans_prob_prod *= mdp.transition[ns,s,a]
                     pi_sto_prod *= pi_sto[ns,na]
 
                 if trans_prob_prod > 0:
-                    c_lambda = start_prob*obs_prob_prod*trans_prob_prod
-                    h_theta = c_lambda*pi_sto_prod
+                    c_tau = start_prob*obs_prob_prod*trans_prob_prod
+                    h_theta = c_tau*pi_sto_prod
                     h_theta_sum += h_theta
                     if h_theta != 0:
                         t_llh += np.log(h_theta) 
-                    dh_theta_sum += c_lambda*(calc_pi_sto_grad(lambda_sa[m], pi_sto, nF, nA, dQ))
+                    dh_theta_sum += c_tau*(calc_pi_sto_grad(tau_sa[m], pi_sto, nF, nA, dQ))
                     t_grad = (1/h_theta_sum) * dh_theta_sum
         llh += t_llh
         grad += t_grad
     return llh, grad
 
-def calc_pi_sto_grad(lambda_sa, pi_sto, nF, nA, dQ):
+def calc_pi_sto_grad(tau_sa, pi_sto, nF, nA, dQ):
     result = np.zeros(nF)
-    nSteps = np.shape(lambda_sa)[1]
+    nSteps = np.shape(tau_sa)[1]
     for z in range(1,nSteps):
         prod_pi = 1
         for k in range(1,nSteps):
             if k != z:
-                s_k = lambda_sa[k,0]
-                a_k = lambda_sa[k,1]
+                s_k = tau_sa[k,0]
+                a_k = tau_sa[k,1]
                 prod_pi *= pi_sto[s_k,a_k]
-        s_z = lambda_sa[z,0]
-        a_z = lambda_sa[z,1]
+        s_z = tau_sa[z,0]
+        a_z = tau_sa[z,1]
         second_term = 0
         for a in range(nA):
             second_term += pi_sto[s_z,a]*dQ[:,s_z*a]

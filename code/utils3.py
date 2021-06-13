@@ -164,25 +164,31 @@ def getKeyFromValue(my_dict, val):
             return key
     return "key doesn't exist"
 
-def applyObsvProb(problem,policy,mdp):
+def applyObsvProb(problem,policy,mdp, sanet_traj = False):
     ''' @brief  Here we synthetically generate noisy observations
     using simulated true trajectories.'''
     if problem.name == 'sorting':
-        # trajsSANet = np.loadtxt("trajsFromSANet.csv", dtype = int)
         trajs, _, _ = generator.sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
         obsvs = np.copy(trajs)
+        i = 0
         for m in range(problem.nTrajs):
             for h in range(problem.nSteps):
-                s = int(trajs[m,h,0])
-                onionLoc, eefLoc, pred, listIDStatus = sid2vals(s, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus)
-                if pred != 2:
-                    # Assumptions: These need to be replaced with real world values later.
-                    # prediction that onion is bad. 95% accuracy of detection
-                    # 30% of claimable onions on conveyor are bad
-                    pp = 0.3*0.95
-                    pred = np.random.choice([pred, int(not pred)], 1, p=[1-pp, pp])[0]
-                obsvs[m,h,0] = vals2sid(onionLoc, eefLoc, pred, listIDStatus, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus)
-    
+                if not sanet_traj:
+                    s = int(trajs[m,h,0])
+                    onionLoc, eefLoc, pred, listIDStatus = sid2vals(s, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus)
+                    if pred != 2:
+                        # Assumptions: These need to be replaced with real world values later.
+                        # prediction that onion is bad. 95% accuracy of detection
+                        # 30% of claimable onions on conveyor are bad
+                        pp = 0.3*0.95
+                        pred = np.random.choice([pred, int(not pred)], 1, p=[1-pp, pp])[0]
+                    obsvs[m,h,0] = vals2sid(onionLoc, eefLoc, pred, listIDStatus, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus)
+                else:
+                    trajsSANet = np.loadtxt("trajsFromSANet.csv", dtype = int)
+                    obsvs[m,h,0] = trajsSANet[i]
+                    obsvs[m,h,1] = policy[trajsSANet[i]]
+                    i += 1
+        # print("Hello")
     elif problem.name == 'gridworld':
         nS = mdp.nStates
         trajs, _, _ = generator.sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
@@ -191,7 +197,7 @@ def applyObsvProb(problem,policy,mdp):
             for h in range(problem.nSteps):
                 s = int(trajs[m,h,0])
                 if s == 15:
-                    pp = 0.2    # With a 40% chance we see the agent in 14th state if he's in the goal state.
+                    pp = 0.3    # With a 30% chance we see the agent in 14th state if he's in the goal state.
                     s = np.random.choice([s, 14], 1, p=[1-pp, pp])[0]
                 obsvs[m,h,0] = s
 
@@ -220,8 +226,8 @@ def getObsvInfo(obsvs, mdp):
                         obs_prob[m,h,s,a] = 1
                 elif mdp.name == 'gridworld':
                         if s == 15:
-                            pp = 0.2
-                            obs_prob[m,h,14,a] = pp # 40% chance that we got state 14 instead.
+                            pp = 0.3
+                            obs_prob[m,h,14,a] = pp # 30% chance that we got state 14 instead.
                             obs_prob[m,h,s,a] = 1 - pp    
                         else:
                             obs_prob[m,h,s,a] = 1

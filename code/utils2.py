@@ -191,7 +191,8 @@ def piInterpretation(policy, name):
 
 def computeResults(expertData, mdp, wL):
 
-    # wL = np.array([-1.95237, -3.35806, 0.850548])
+    # wL = np.array([0.0975809, 3.95644, 0.0975809, 3.95644, -0.44997, -0.00783907, 2.11364, -0.0363787])    # SANet data
+    # wL = np.array([0.0657314, 1.67055, 0.0657314, 1.67055, -2.41512, -0.0274517, 2.10948, -0.0187844])
     mdp = utils.convertW2R(expertData.weight, mdp)
     if mdp.useSparse:
         piE, VE, QE, HE = solver.policyIteration(mdp)
@@ -253,6 +254,8 @@ def computeResults(expertData, mdp, wL):
     and learner wrt true weights to find the diff in value they acrue '''
     valueDiff  = abs(vE - vL)   # ILE - Inverse Learning Error
     policyDiff = np.sum(d)/mdp.nStates  # LBA - Learned Behavior Accuracy
+
+    # np.savetxt("learned_policy_partialobsv.csv", piL, delimiter=",")
 
     return rewardDiff, valueDiff, policyDiff, piL, piE
 

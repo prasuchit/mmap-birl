@@ -81,7 +81,7 @@ def generateDemonstration(mdp, problem, numOccs=0):
                     trajs[i, j, 1] = occlusions[j]     # 0 - state 1 - action
 
     expertData.trajSet = trajs
-    yu.YAMLGenerator(mdp, expertData).writeVals()
+    # yu.YAMLGenerator(mdp, expertData).writeVals()
 
     return expertData
 
@@ -127,7 +127,7 @@ def generateTrajectory(mdp, problem):
                 trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
             print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
         else:
-            obsvs = utils3.applyObsvProb(problem, policy, mdp)
+            obsvs = utils3.applyObsvProb(problem, policy, mdp, sanet_traj = True)
             return obsvs, policy
 
 
@@ -260,9 +260,9 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None, sorting_behavior =
     return trajs, Vmean, Vvar 
 
 
-def sampleLambdaTrajectories(mdp, traj, nTrajs, nSteps, seed = None):
+def sampleTauTrajectories(mdp, traj, nTrajs, nSteps, seed = None):
 
-    lamdatrajs = np.zeros((nTrajs, nSteps, 2)).astype(int)
+    tautrajs = np.zeros((nTrajs, nSteps, 2)).astype(int)
     np.random.seed(seed)
     nS = mdp.nStates
     for m in range(nTrajs):
@@ -276,20 +276,20 @@ def sampleLambdaTrajectories(mdp, traj, nTrajs, nSteps, seed = None):
                     onionLoc, eefLoc, pred, listIDStatus = utils3.sid2vals(s)
                     if pred != 2:
                         pred = np.random.choice([pred, int(not pred)], 1)[0]
-                    lamdatrajs[m,h,0] = utils3.vals2sid(onionLoc, eefLoc, pred, listIDStatus)
-                    lamdatrajs[m,h,1] = a
+                    tautrajs[m,h,0] = utils3.vals2sid(onionLoc, eefLoc, pred, listIDStatus)
+                    tautrajs[m,h,1] = a
 
                 elif mdp.name == 'gridworld':
                     if h > 0 and s == 14 and ps != 13:
-                        lamdatrajs[m,h,0] = np.random.choice([s, 15], 1)[0]
-                        lamdatrajs[m,h,1] = a 
+                        tautrajs[m,h,0] = np.random.choice([s, 15], 1)[0]
+                        tautrajs[m,h,1] = a 
                     else:
-                        lamdatrajs[m,h,0] = s
-                        lamdatrajs[m,h,1] = a
+                        tautrajs[m,h,0] = s
+                        tautrajs[m,h,1] = a
             else:
-                lamdatrajs[m,h,0] = s
-                lamdatrajs[m,h,1] = a
-    return lamdatrajs
+                tautrajs[m,h,0] = s
+                tautrajs[m,h,1] = a
+    return tautrajs
 
 def sampleMultinomial(dist, seed):
     '''

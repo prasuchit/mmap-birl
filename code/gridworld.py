@@ -39,12 +39,20 @@ def init(gridSize=12, blockSize=2, noise=0.3, discount=0.99, useSparse = 0):
             j = math.floor(y / blockSize)
             f = loc2s(i, j, int(gridSize/blockSize)) 
             # F[s, f] = 1
-            if s == 6:
+            if s == 5:
                 F[s,0] = 1
             elif s == 11:
                 F[s,1] = 1
             elif s == 15:
                 F[s,2] = 1
+
+    # Check transition probability
+    for a in range(nA):
+        for s in range(nS):
+            err = abs(sum(T[:, s, a]) - 1)
+            if err > 1e-6 or np.any(T) > 1 or np.any(T) < 0:
+                print(f"T(:,{s},{a}) = {T[:, s, a]}")
+                print('ERROR: \n', s, a, np.sum(T[:, s, a]))
 
     start = np.ones((nS, 1))
     start = start / (np.sum(start) - 3) # Excluding the prob of the 3 below states.

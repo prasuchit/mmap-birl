@@ -28,7 +28,7 @@ def setIRLParams(alg=None, restart=0, optimizer='Newton-CG', solverMethod= 'scip
         irlOpts.stepsize = 1/irlOpts.MaxIter
 
     if irlOpts.priorType == 'Gaussian':
-        irlOpts.mu = 0.0
+        irlOpts.mu = 0.0    # 0.0 for sorting and -1.0 for gridworld
         irlOpts.sigma = 0.5
 
     if irlOpts.alg == 'MAP_BIRL' or irlOpts.alg == 'MMAP_BIRL':

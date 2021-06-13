@@ -40,7 +40,7 @@ def sampleWeight(problem, nF, seed=None):
         else:   # Forestworld weights
             w[0] = -0.5
             w[1] = -1
-            w[2] = 0.1
+            w[2] = 1
     elif problem.name == 'highway':
         # weights are assigned 1 for collision, n for nlanes, 1 for high speed
         if i == 1:              # fast driver avoids collisions and prefers high speed
@@ -229,7 +229,7 @@ def sampleNewWeight(dims, options, seed=None):
         w0 = np.clip(np.random.multivariate_normal(mean, cov), a_min=lb, a_max=ub).reshape((dims, 1))
 
         ''' Good weight(s) for testing Forestworld ''' 
-        # w0 = np.array([[-1.        ],  [-1.        ],  [-1.     ]])
+        # w0 = np.array([[-1        ], [-1       ], [-1]])
 
         ''' Good weight(s) for testing 5 traj 10 steps 0 occl nGrid 4 HIGHWAY ''' 
         # w0 = np.array([[ 1.        ], [-0.01359188], [ 0.38688691], [-0.04321886], [-0.07878083], [-0.85341881]])
