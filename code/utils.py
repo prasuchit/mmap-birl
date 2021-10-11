@@ -53,7 +53,7 @@ def sampleWeight(problem, nF, seed=None):
         elif i == 2:            # safe driver avoids collisions and prefers right-most lane
             w[0] = -1           # collision
             w[problem.nLanes] = 0.1 # right-most lane
-            w[-1] = -0.0001 # Slight penalty for fast speed
+            w[-1] = -0.001 # Slight penalty for fast speed
 
         elif i == 3:            # erratic driver prefers collisions and high-speed
             w[0] = 1            # collision
@@ -62,10 +62,7 @@ def sampleWeight(problem, nF, seed=None):
             w = np.random.rand(nF, 1)
 
     elif problem.name == 'sorting':
-        if problem.sorting_behavior == 'pick_inspect':
-            w = np.reshape(np.array([1,-1,-1,1,1.5,0,1,-1]), (nF,1))
-        else:
-            w = np.reshape(np.array([1,-1,-1,1,-0.1,1,-1.5,-0.1]), (nF,1))
+        w = np.reshape(np.array([1,-1,-1,1,1.5,0.5]), (nF,1))
     else:
         print("Unknown problem name!!")
         exit(0)
@@ -220,12 +217,12 @@ def sampleNewWeight(dims, options, seed=None):
     lb = options.lb 
     ub = options.ub    
     if options.priorType == 'Gaussian':
-        # w0 = options.mu + np.random.randn(dims, 1)*options.sigma  # Direct way to do it
+        # w0 = options.mu + np.random.randn(dims, 1)*options.sigmasq  # Direct way to do it
         # for i in range(len(w0)):
         #     w0[i] = max(lb, min(ub, w0[i])) # Check to ensure weights are within bounds
 
         mean = np.ones(dims) * options.mu
-        cov = np.eye(dims) * options.sigma
+        cov = np.eye(dims) * options.sigmasq
         w0 = np.clip(np.random.multivariate_normal(mean, cov), a_min=lb, a_max=ub).reshape((dims, 1))
 
         ''' Good weight(s) for testing Forestworld ''' 

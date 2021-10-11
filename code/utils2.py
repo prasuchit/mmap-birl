@@ -191,55 +191,25 @@ def piInterpretation(policy, name):
 
 def computeResults(expertData, mdp, wL):
 
-    # wL = np.array([0.0975809, 3.95644, 0.0975809, 3.95644, -0.44997, -0.00783907, 2.11364, -0.0363787])    # SANet data
-    # wL = np.array([0.0657314, 1.67055, 0.0657314, 1.67055, -2.41512, -0.0274517, 2.10948, -0.0187844])
     mdp = utils.convertW2R(expertData.weight, mdp)
     if mdp.useSparse:
         piE, VE, QE, HE = solver.policyIteration(mdp)
-        if mdp.name == 'sorting':
-            if mdp.sorting_behavior == 'pick_inspect':
-                vE = np.array(np.dot(np.dot(expertData.weight.T,HE.todense().T),mdp.start[0].todense()))
-            elif mdp.sorting_behavior == 'roll_pick':
-                vE = np.array(np.dot(np.dot(expertData.weight.T,HE.todense().T),mdp.start[1].todense()))
-            else: print("Undefined Sorting Behavior!")
-        else:
-            vE = np.array(np.dot(np.dot(expertData.weight.T,HE.todense().T),mdp.start.todense()))
+        vE = np.array(np.dot(np.dot(expertData.weight.T,HE.todense().T),mdp.start.todense()))
         QE = np.array(QE.todense())
     else:
         piE, VE, QE, HE = solver.piMDPToolbox(mdp)
         # piE, VE, QE, HE = solver.policyIteration(mdp)
-        if mdp.name == 'sorting':
-            if mdp.sorting_behavior == 'pick_inspect':
-                vE = np.matmul(np.matmul(expertData.weight.T,HE.T),mdp.start[0])
-            elif mdp.sorting_behavior == 'roll_pick':
-                vE = np.matmul(np.matmul(expertData.weight.T,HE.T),mdp.start[1])
-            else: print("Undefined Sorting Behavior!")
-        else:
-            vE = np.matmul(np.matmul(expertData.weight.T,HE.T),mdp.start)
-
+        vE = np.matmul(np.matmul(expertData.weight.T,HE.T),mdp.start)
+        
     mdp = utils.convertW2R(wL, mdp)
     if mdp.useSparse:
         piL, VL, QL, HL = solver.policyIteration(mdp)
-        if mdp.name == 'sorting':
-            if mdp.sorting_behavior == 'pick_inspect':
-                vL = np.array(np.dot(np.dot(expertData.weight.T,HL.todense().T),mdp.start[0].todense()))
-            elif mdp.sorting_behavior == 'roll_pick':
-                vL = np.array(np.dot(np.dot(expertData.weight.T,HL.todense().T),mdp.start[1].todense()))
-            else: print("Undefined Sorting Behavior!")
-        else:
-            vL = np.array(np.dot(np.dot(expertData.weight.T,HL.todense().T),mdp.start.todense()))
+        vL = np.array(np.dot(np.dot(expertData.weight.T,HL.todense().T),mdp.start.todense()))
         QL = np.array(QL.todense())
     else:
         piL, VL, QL, HL = solver.piMDPToolbox(mdp)
         # piL, VL, QL, HL = solver.policyIteration(mdp)
-        if mdp.name == 'sorting':
-            if mdp.sorting_behavior == 'pick_inspect':
-                vL = np.matmul(np.matmul(expertData.weight.T,HL.T),mdp.start[0])
-            elif mdp.sorting_behavior == 'roll_pick':
-                vL = np.matmul(np.matmul(expertData.weight.T,HL.T),mdp.start[1])
-            else: print("Undefined Sorting Behavior!")
-        else:
-            vL = np.matmul(np.matmul(expertData.weight.T,HL.T),mdp.start)
+        vL = np.matmul(np.matmul(expertData.weight.T,HL.T),mdp.start)
     d  = np.zeros((mdp.nStates, 1))
     for s in range(mdp.nStates):
         ixE = QE[s, :] == max(QE[s, :])
@@ -254,7 +224,8 @@ def computeResults(expertData, mdp, wL):
     and learner wrt true weights to find the diff in value they acrue '''
     valueDiff  = abs(vE - vL)   # ILE - Inverse Learning Error
     policyDiff = np.sum(d)/mdp.nStates  # LBA - Learned Behavior Accuracy
-
+    
+    # print((piL.squeeze() == piE.squeeze()).sum(), "/", mdp.nStates)
     # np.savetxt("learned_policy_partialobsv.csv", piL, delimiter=",")
 
     return rewardDiff, valueDiff, policyDiff, piL, piE

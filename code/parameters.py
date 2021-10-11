@@ -2,79 +2,76 @@ import options
 import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
 
-def setIRLParams(alg=None, restart=0, optimizer='Newton-CG', solverMethod= 'scipy', optimMethod = 'nesterovGrad', normMethod = 'softmax', disp=False):   # L-BFGS-B or Newton-CG
+def setIRLParams(data_loaded):   # L-BFGS-B or Newton-CG
     irlOpts = options.irlOptions()
-    irlOpts.alg = alg.name
-    irlOpts.llhType = alg.llhType 
-    irlOpts.priorType = alg.priorType
-    irlOpts.restart = restart 
-    irlOpts.showMsg = disp
-    irlOpts.optimizer = optimizer 
+    irlOpts.alg = data_loaded['algoName']
+    irlOpts.llhType = data_loaded['llhName']
+    irlOpts.priorType = data_loaded['priorName']
+    irlOpts.restart = int(data_loaded['restart'])
+    irlOpts.showMsg = data_loaded['disp']
+    irlOpts.optimizer = data_loaded['optimizer']
     irlOpts.lb = -1 
     irlOpts.ub = 1 
-    irlOpts.solverMethod = solverMethod
-    irlOpts.optimMethod = optimMethod
-    irlOpts.normMethod = normMethod   
-    irlOpts.alpha = 1   # learning rate
+    irlOpts.solverMethod = data_loaded['solverMethod']
+    irlOpts.optimMethod = data_loaded['optimMethod']
+    irlOpts.normMethod = data_loaded['normMethod']
+    irlOpts.alpha = float(data_loaded['alpha'])   # learning rate
 
     if irlOpts.optimMethod == 'gradAsc':
         irlOpts.decay = .95
-        irlOpts.MaxIter = 100
+        irlOpts.MaxIter = int(data_loaded['iters'])
         irlOpts.stepsize = 1/irlOpts.MaxIter
 
     elif irlOpts.optimMethod == 'nesterovGrad':
         irlOpts.decay = 0.9
-        irlOpts.MaxIter = 100
+        irlOpts.MaxIter = int(data_loaded['iters'])
         irlOpts.stepsize = 1/irlOpts.MaxIter
 
     if irlOpts.priorType == 'Gaussian':
-        irlOpts.mu = 0.0    # 0.0 for sorting and -1.0 for gridworld
-        irlOpts.sigma = 0.5
+        irlOpts.mu = float(data_loaded['prior_mean'])   
+        irlOpts.sigmasq = float(data_loaded['prior_var'])
 
     if irlOpts.alg == 'MAP_BIRL' or irlOpts.alg == 'MMAP_BIRL':
         if irlOpts.llhType == 'BIRL':
-            irlOpts.eta = 3
+            irlOpts.eta = float(data_loaded['boltz_beta'])
 
     return irlOpts
 
-def setProblemParams(name, iters=10, discount=0.99, nTrajs=10, nSteps=100, nOccs = 0, gridSize=12, blockSize=2, nLanes=3, nSpeeds=2, 
-                        sorting_behavior = 'pick_inspect', nOnionLoc = 5, nEEFLoc = 4, nPredict = 3, nlistIDStatus = 3, noise = 0.3, 
-                        obsv_noise = False, seed=None, useSparse = 0):
+def setProblemParams(data_loaded):
 
-    ''' NOTE: The function arguments could be replaced by **kwargs. For future reference '''
-    
     problem = options.problem()
-    problem.name = name
-    problem.iters = np.arange(iters)
+    problem.name = data_loaded['probName']
+    problem.iters = np.arange(int(data_loaded['iters'])
     problem.nExps = len(problem.iters)
-    problem.discount = discount
+    problem.discount = float(data_loaded['discount'])
     problem.nExperts = 1
-    problem.nTrajs = nTrajs
-    problem.nSteps = nSteps
+    problem.nTrajs = int(data_loaded['nTrajs'])
+    problem.nSteps = int(data_loaded['nSteps'])
     problem.initSeed = 1
-    problem.seed = seed
-    problem.nOccs = nOccs
-    problem.useSparse = useSparse
-    problem.obsv_noise = obsv_noise
+    if data_loaded['seed'] == 'None':
+        problem.seed = None
+    else: problem.seed = int(data_loaded['seed'])
+    problem.nOccs = int(data_loaded['nOccs'])
+    problem.useSparse = bool(data_loaded['useSparse'])
+    problem.obsv_noise = float(data_loaded['obsv_noise'])
 
     if problem.name == 'gridworld':
-        problem.gridSize = gridSize
-        problem.blockSize = blockSize
-        problem.noise = noise
-        problem.filename = name + '_' + str(problem.gridSize) + 'x' + str(problem.blockSize)
+        problem.gridSize = int(data_loaded['init_gridSize'])
+        problem.blockSize = int(data_loaded['init_blockSize'])
+        problem.noise = float(data_loaded['init_noise'])
+        problem.filename = problem.name + '_' + str(problem.gridSize) + 'x' + str(problem.blockSize)
 
     elif problem.name == 'highway':
-        problem.nSpeeds  = nSpeeds
-        problem.nLanes   = nLanes
-        problem.gridSize = gridSize
-        problem.filename = name + '_' + str(problem.gridSize) + 'x' + str(problem.nLanes)
+        problem.nSpeeds  = int(data_loaded['init_nSpeeds'])
+        problem.nLanes   = int(data_loaded['init_nLanes'])
+        problem.gridSize = int(data_loaded['init_gridSize'])
+        problem.noise = float(data_loaded['init_noise'])
+        problem.filename = problem.name + '_' + str(problem.gridSize) + 'x' + str(problem.nLanes)
     
     elif problem.name == 'sorting':
-        problem.sorting_behavior = sorting_behavior
-        problem.nOnionLoc = nOnionLoc
-        problem.nEEFLoc = nEEFLoc
-        problem.nPredict = nPredict
-        problem.nlistIDStatus = nlistIDStatus
-        problem.noise = noise
-        problem.filename = name + '_' + str(problem.nOnionLoc) + 'x' + str(problem.nPredict)
+        problem.nOnionLoc = int(data_loaded['nOnionLoc'])
+        problem.nEEFLoc = int(data_loaded['nEEFLoc'])
+        problem.nPredict = int(data_loaded['nPredict'])
+        problem.noise = float(data_loaded['init_noise'])
+        problem.filename = problem.name + '_' + str(problem.nOnionLoc) + 'x' + str(problem.nPredict)
     return problem

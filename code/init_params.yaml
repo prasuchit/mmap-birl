@@ -1,0 +1,38 @@
+solverMethod: 'manual'
+# solverMethod: 'scipy'
+algoName: 'MAP_BIRL'
+# algoName: 'MMAP_BIRL'
+optimizer: 'L-BFGS-B'
+# optimizer: 'Newton-CG'
+restart: 1
+disp: True
+iters: 100
+discount: 0.9
+seed: 'None'
+llhName: 'BIRL'
+priorName: 'Gaussian'
+# priorName: 'Uniform'
+prior_mean: 0.0     # 1.0 for sorting and -1.0 for gridworld
+prior_var: 0.5
+boltz_beta: 0.3
+alpha: 1    # Learning rate
+# probName: 'highway'
+# probName: 'gridworld'
+probName: 'sorting'
+optimMethod: 'gradAsc'
+# optimMethod: 'nesterovGrad'
+nTrajs: 1
+nSteps: 15
+problemSeed: None
+nOnionLoc: 4
+nEEFLoc: 4
+nPredict: 3
+init_gridSize: 4   # Gridworld problem
+init_blockSize: 2  # Gridworld problem
+init_nLanes: 3     # Highway problem
+init_nSpeeds: 2    # Highway problem
+init_noise: 0.1    # Transition noise
+obsv_noise: False
+nOccs: 0  # 4 occl constant for Forestworld
+useSparse: False
+normMethod: 'None'  # 'softmax' '0-1' 'None'

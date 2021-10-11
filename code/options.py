@@ -1,14 +1,6 @@
 import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
 
-
-class algorithm:
-    def __init__(self, name=None, llhType=None, priorType=None): 
-        self.name = name
-        self.llhType = llhType 
-        self.priorType = priorType
-
-
 class demonstrations:   
     def __init__(self):
         self.weight = None
@@ -45,7 +37,7 @@ class irlOptions:
         self.eta = None
         self.optimizer = None
         self.mu = None
-        self.sigma = None
+        self.sigmasq = None
         self.solverMethod = None
         self.optimMethod = None
         self.normMethod = None
@@ -74,6 +66,4 @@ class problem:
         self.nOnionLoc = None
         self.nEEFLoc = None
         self.nPredict = None
-        self.nlistIDStatus = None
         self.useSparse = None
-        self.sorting_behavior = None

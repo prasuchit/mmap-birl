@@ -187,8 +187,8 @@ def calcNegLogPost(w, trajInfo, mdp, options):
 def calcLogPrior(w, options):
     if options.priorType == 'Gaussian':
         x = w - options.mu
-        prior = np.sum(np.matmul(np.transpose(x), x) * -1 / 2 * math.pow(options.sigma, 2))
-        grad = -x / math.pow(options.sigma, 2)
+        prior = np.sum(np.matmul(np.transpose(x), x) * -1 / 2 * math.pow(options.sigmasq, 2))
+        grad = -x / math.pow(options.sigmasq, 2)
     else:
         prior = math.log(1)
         grad = np.zeros(w.shape)
@@ -223,14 +223,8 @@ def calcLogLLH_obsv(w, obsvs, obs_prob, mdp, options):
     # Soft-max policy
     pi_sto = np.exp(NBQ)  # Just pi, not log pi anymore
 
-    if mdp.name == 'sorting':
-        sampling_quantity = 100
-        if mdp.sorting_behavior == 'pick_inspect':
-            start_prob = np.max(mdp.start[0])
-        else: start_prob = np.max(mdp.start[1])
-    else: 
-        sampling_quantity = 100
-        start_prob = np.max(mdp.start)
+    sampling_quantity = 100
+    start_prob = np.max(mdp.start)
 
     llh = 0
     grad = np.zeros(nF) # Calculating the gradient of the llh function

@@ -23,7 +23,7 @@ def generateMDP(problem):
         mdp = highway3.init(problem.gridSize, problem.nSpeeds, problem.nLanes, problem.discount, problem.useSparse)
 
     elif problem.name == 'sorting':
-        mdp = sorting.init(problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.nlistIDStatus, problem.sorting_behavior, problem.discount, problem.useSparse, problem.noise)
+        mdp = sorting.init(problem.nOnionLoc, problem.nEEFLoc, problem.nPredict, problem.discount, problem.useSparse, problem.noise)
     
     nS = mdp.nStates
     nA = mdp.nActions
@@ -61,9 +61,6 @@ def generateDemonstration(mdp, problem, numOccs=0):
         for i in range(problem.nTrajs):
             try:
                 occlusions = np.zeros(expertData.nSteps)
-                # if mdp.name == 'gridworld':
-                #     pass    # We'll do this based on specific states a little below.
-                # else:
                 occlusions[random.sample(range(problem.nSteps), numOccs)] = -1
                 # occlusions[1 + np.arange(int(expertData.nSteps/3))] = -1
                 # occlusions[(expertData.nSteps - 2) - np.arange(int(expertData.nSteps/3))] = -1
@@ -71,11 +68,6 @@ def generateDemonstration(mdp, problem, numOccs=0):
                 print("ERROR: Number of occlusions exceed total number of steps. Exiting!")
                 raise SystemExit(0)
             for j in range(problem.nSteps):
-                # if mdp.name == 'gridworld':
-                #     if trajs[i, j, 0] in mdp.forest_cover:
-                #         trajs[i, j, 0] = -1     # The 3rd index of trajs holds the s-a pair
-                #         trajs[i, j, 1] = -1     # 0 - state 1 - action
-                # else:
                 if occlusions[j] == -1:
                     trajs[i, j, 0] = occlusions[j]     # The 3rd index of trajs holds the s-a pair
                     trajs[i, j, 1] = occlusions[j]     # 0 - state 1 - action
@@ -110,26 +102,22 @@ def generateTrajectory(mdp, problem):
         # np.savetxt("expert_policy.csv", policy, delimiter=",")
         toc = time.time()
         elapsedTime = toc - tic
-        if mdp.name == 'pick_inspect':
-            optValue = np.dot(np.transpose(mdp.start[0]), value)
-        else:
-            optValue = np.dot(np.transpose(mdp.start[1]), value)
+        optValue = np.dot(np.transpose(mdp.start), value)
         
         if not problem.obsv_noise:
             if mdp.useSparse:
                 meanThreshold = 1
                 varThreshold = 1
                 while True:
-                    trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
+                    trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
                     if abs(abs(optValue[0,0]) - abs(trajVmean)) < meanThreshold and trajVvar < varThreshold:
                         break
             else:
-                trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
+                trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
             print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
         else:
             obsvs = utils3.applyObsvProb(problem, policy, mdp, sanet_traj = True)
             return obsvs, policy
-
 
     elif problem.name == 'gridworld':
         print(f'solve {mdp.name}\n')
@@ -145,11 +133,11 @@ def generateTrajectory(mdp, problem):
                 meanThreshold = 1
                 varThreshold = 1
                 while True:
-                    trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
+                    trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
                     if abs(abs(optValue[0,0]) - abs(trajVmean)) < meanThreshold and trajVvar < varThreshold:
                         break
             else:
-                trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed, problem.sorting_behavior)
+                trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
             print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
         else:
             obsvs = utils3.applyObsvProb(problem, policy, mdp)
@@ -208,7 +196,7 @@ def generateTrajectory(mdp, problem):
     
     return trajs, policy
 
-def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None, sorting_behavior = None):
+def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None):
 
     trajs = np.zeros((nTrajs, nSteps, 2)).astype(int)
     vList = np.zeros(nTrajs)
@@ -221,22 +209,10 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None, sorting_behavior =
     for m in range(nTrajs):
         if mdp.useSparse:
             start = np.array((mdp.start).todense())
-            if mdp.name == 'sorting':
-                if sorting_behavior == 'pick_inspect':
-                    sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start[0], (mdp.nStates)))
-                else:
-                    sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start[1], (mdp.nStates)))
-            else:
-                sample = np.random.multinomial(n=1, pvals=np.reshape(start, start.size))
+            sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start, start.size))
         else:
-            if mdp.name == 'sorting':
-                if sorting_behavior == 'pick_inspect':
-                    sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start[0], (mdp.nStates)))
-                else:
-                    sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start[1], (mdp.nStates)))                  
-            else:
-                # sample = sampleMultinomial(np.reshape(mdp.start, (mdp.nStates)), seed)
-                sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start, (mdp.nStates)))
+            # sample = sampleMultinomial(np.reshape(mdp.start, (mdp.nStates)), seed)
+            sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start, (mdp.nStates)))
             
         s = np.squeeze(np.where(sample == 1))
         # s = sample
@@ -247,18 +223,14 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None, sorting_behavior =
             v = v + r * math.pow(mdp.discount, h)
             trajs[m, h, :] = [s, a]
             sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.transition[:, s, a], (mdp.nStates)))
-            if mdp.name == 'sorting':
-                s = np.squeeze(np.where(sample == 1))
-            else:
-                s = np.squeeze(np.where(sample == 1))
+            s = np.squeeze(np.where(sample == 1))
             # sample = sampleMultinomial(np.reshape(mdp.transition[:, s, a], (mdp.nStates)), seed)
             # s = sample
         vList[m] = v
     Vmean = np.mean(vList)
     Vvar = np.var(vList)
     # trajInfo = utils.getTrajInfo(trajs, mdp)
-    return trajs, Vmean, Vvar 
-
+    return trajs, Vmean, Vvar
 
 def sampleTauTrajectories(mdp, traj, nTrajs, nSteps, seed = None):
 
@@ -273,10 +245,10 @@ def sampleTauTrajectories(mdp, traj, nTrajs, nSteps, seed = None):
             a = copy.copy(int(traj[h,1]))
             if s != -1:
                 if mdp.name =='sorting':
-                    onionLoc, eefLoc, pred, listIDStatus = utils3.sid2vals(s)
+                    onionLoc, eefLoc, pred = utils3.sid2vals(s)
                     if pred != 2:
                         pred = np.random.choice([pred, int(not pred)], 1)[0]
-                    tautrajs[m,h,0] = utils3.vals2sid(onionLoc, eefLoc, pred, listIDStatus)
+                    tautrajs[m,h,0] = utils3.vals2sid(onionLoc, eefLoc, pred)
                     tautrajs[m,h,1] = a
 
                 elif mdp.name == 'gridworld':

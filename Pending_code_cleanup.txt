@@ -1,14 +1,7 @@
-Get rid of Roll behavior if possible!
 Clean up the way observations are obtained, obsv model is saved, sampled trajectories are generated(number of them is chosen)
 Add sanet_traj vs synthetic_traj as an argument in the beginning instead of inside generate trajectory within generator.
 Make the MDP files independent of the rest of it and allow a YAML load of MDP and trajectories.
-Add command-line arguments for hyperparameters, with a help flag detailing what they are.
 Clean up parallel_processing and sparse arguments all over.
 Get a readme setup with the additional packages to install like tqdm and pymdptoolbox linked to it.
+Try adding very small non-zero transitions for all other states than the probable ones to avoid divide by zero type errors
 ==================================================================================================================
-
-The MDP uses a very clean transition from one action-state to the next instead of a continuous state space where
-we go through other intermediate states to get to the finished action state.
-In order to use SANet trajectories in the future, either SANet should know when an action is completed and only then 
-give me a next state, or the MDP has to be modified to include these intermidiate states where you'd do a no-op.
-FUCKING SAURABH!!
