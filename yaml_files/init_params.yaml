@@ -36,3 +36,4 @@ obsv_noise: False
 nOccs: 0  # 4 occl constant for Forestworld
 useSparse: False
 normMethod: 'None'  # 'softmax' '0-1' 'None'
+trajType: 'synthetic'   # synthetic or sanet available for sorting

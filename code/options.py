@@ -51,7 +51,6 @@ class problem:
         self.name = None
         self.iters = None
         self.discount = None
-        self.nExps = None
         self.nExperts = None
         self.nTrajs = None
         self.nSteps = None

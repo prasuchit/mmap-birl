@@ -25,7 +25,7 @@ np.seterr(divide='ignore', invalid='ignore')
 def main():
 
     # Read YAML file
-    init_yaml_file = open(os.getcwd()+"\code\init_params.yaml")       
+    init_yaml_file = open(os.getcwd()+"\yaml_files\init_params.yaml")       
 
     data_loaded = yaml.safe_load(init_yaml_file)
 
@@ -35,7 +35,7 @@ def main():
 
     mdp = generator.generateMDP(problem)
 
-    expertData = generator.generateDemonstration(mdp, problem, problem.nOccs)
+    expertData = generator.generateDemonstration(mdp, problem)
 
     opts = irlOpts
 
@@ -106,8 +106,8 @@ def main():
                 runtime = t1 - t0
                 # print("Same number of actions between expert and learned pi: ",
                 #       (piL.squeeze() == piE.squeeze()).sum(), "/", mdp.nStates)
-                # np.savetxt("expert_policy.csv", piE, delimiter=",")
-                # np.savetxt("learned_policy.csv", piL, delimiter=",")
+                # np.savetxt(os.getcwd()+"\csv_files\expert_policy.csv", piE, delimiter=",")
+                # np.savetxt(os.getcwd()+"\csv_files\learned_policy.csv", piL, delimiter=",")
                 print("Time taken: ", runtime, " seconds")
                 print(
                     f"Policy Diff: {policyDiff} | Reward Diff: {rewardDiff}| Value Diff: {valueDiff.squeeze()}")

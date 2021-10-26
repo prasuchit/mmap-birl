@@ -115,7 +115,7 @@ def init(nOnionLoc, nEEFLoc, nPredict, discount, useSparse, noise=0.05):
                 print(f"T(:,{s},{a}) = {T[:, s, a]}")
                 print('ERROR: \n', s, a, np.sum(T[:, s, a]))
 
-    # np.savetxt("sorting_T.csv",np.reshape(T,(nS,nS*nA)))
+    # np.savetxt(os.getcwd()+"\csv_files\sorting_T.csv",np.reshape(T,(nS,nS*nA)))
     start = start / np.sum(start)  # Pick inspect
     mdp = models.mdp()
     mdp.name = 'sorting'

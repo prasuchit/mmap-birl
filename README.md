@@ -4,7 +4,21 @@ This project builds on the foundation established by J. Choi and K. Kim in MAP i
 
 The algorithm developed in this repo considers occluded and noisy expert demonstrations and tries to learn the best reward function using Marginalized Maximum a Posteriori method with Bayesian IRL inference technique.
 
-The codebase has been built and developed in python based on an existing repo by Jaedeug Choi (jdchoi@ai.kaist.ac.kr) in Matlab. Check out the following links for file specific readme:
+The codebase has been built and developed in python based on an existing repo by Jaedeug Choi (jdchoi@ai.kaist.ac.kr) in Matlab. 
+
+The paper is available at this [link](https://arxiv.org/pdf/2109.07788). 
+
+Cite this work as:
+
+@article{suresh2021marginal,
+  title={Marginal MAP Estimation for Inverse RL under Occlusion with Observer Noise},
+  author={Suresh, Prasanth Sengadu and Doshi, Prashant},
+  journal={arXiv preprint arXiv:2109.07788},
+  year={2021}
+}
+
+
+Check out the following links for file specific readme:
 
 1. [runner.py](https://github.com/prasuchit/mmap-irl/blob/master/Readme/runner-Readme.md)
 2. [birl.py](https://github.com/prasuchit/mmap-irl/blob/master/Readme/birl-Readme.md)

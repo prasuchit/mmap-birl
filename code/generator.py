@@ -35,13 +35,14 @@ def generateMDP(problem):
     mdp.nOccs = problem.nOccs
     return mdp
 
-def generateDemonstration(mdp, problem, numOccs=0):
+def generateDemonstration(mdp, problem):
     '''
     @brief  Generates trajectories using simulate technique and
             for each traj, generates a list of random indices of
             len nOccs within range of nSteps where occl are placed.
     '''
     expertData = options.demonstrations()
+    numOccs = problem.nOccs
     nF = mdp.nFeatures
     if mdp.sampled is False:
         w = utils.sampleWeight(problem, nF, problem.seed)
@@ -74,7 +75,7 @@ def generateDemonstration(mdp, problem, numOccs=0):
 
     expertData.trajSet = trajs
     # yu.YAMLGenerator(mdp, expertData).writeVals()
-
+    yu.YAMLGenerator().readVals()
     return expertData
 
 def generateTrajectory(mdp, problem):
@@ -99,7 +100,7 @@ def generateTrajectory(mdp, problem):
             # policy, value, _, _ = solver.policyIteration(mdp)
             policy, value, _, _ = solver.piMDPToolbox(mdp)
 
-        # np.savetxt("expert_policy.csv", policy, delimiter=",")
+        # np.savetxt(os.getcwd()+"\csv_files\expert_policy.csv", policy, delimiter=",")
         toc = time.time()
         elapsedTime = toc - tic
         optValue = np.dot(np.transpose(mdp.start), value)

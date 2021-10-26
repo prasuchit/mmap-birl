@@ -110,7 +110,7 @@ def getKeyFromValue(my_dict, val):
             return key
     return "key doesn't exist"
 
-def applyObsvProb(problem,policy,mdp, sanet_traj = False):
+def applyObsvProb(problem, policy, mdp):
     ''' @brief  Here we synthetically generate noisy observations
     using simulated true trajectories.'''
     if problem.name == 'sorting':
@@ -119,18 +119,18 @@ def applyObsvProb(problem,policy,mdp, sanet_traj = False):
         i = 0
         for m in range(problem.nTrajs):
             for h in range(problem.nSteps):
-                if not sanet_traj:
+                if problem.trajType == 'synthetic':
                     s = int(trajs[m,h,0])
-                    onionLoc, eefLoc, pred, listIDStatus = sid2vals(s, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict)
+                    onionLoc, eefLoc, pred = sid2vals(s, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict)
                     if pred != 2:
                         # Assumptions: These need to be replaced with real world values later.
                         # prediction that onion is bad. 95% accuracy of detection
                         # 30% of claimable onions on conveyor are bad
                         pp = 0.3*0.95
                         pred = np.random.choice([pred, int(not pred)], 1, p=[1-pp, pp])[0]
-                    obsvs[m,h,0] = vals2sid(onionLoc, eefLoc, pred, listIDStatus, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict)
+                    obsvs[m,h,0] = vals2sid(onionLoc, eefLoc, pred, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict)
                 else:
-                    trajsSANet = np.loadtxt("trajsFromSANet.csv", dtype = int)
+                    trajsSANet = np.loadtxt(os.getcwd()+"\csv_files\trajsFromSANet.csv", dtype = int)
                     obsvs[m,h,0] = trajsSANet[i]
                     obsvs[m,h,1] = policy[trajsSANet[i]]
                     i += 1

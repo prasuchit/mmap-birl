@@ -41,8 +41,7 @@ def setProblemParams(data_loaded):
 
     problem = options.problem()
     problem.name = data_loaded['probName']
-    problem.iters = np.arange(int(data_loaded['iters'])
-    problem.nExps = len(problem.iters)
+    problem.iters = np.arange(int(data_loaded['iters']))
     problem.discount = float(data_loaded['discount'])
     problem.nExperts = 1
     problem.nTrajs = int(data_loaded['nTrajs'])
@@ -73,5 +72,6 @@ def setProblemParams(data_loaded):
         problem.nEEFLoc = int(data_loaded['nEEFLoc'])
         problem.nPredict = int(data_loaded['nPredict'])
         problem.noise = float(data_loaded['init_noise'])
+        problem.trajType = data_loaded['trajType']
         problem.filename = problem.name + '_' + str(problem.nOnionLoc) + 'x' + str(problem.nPredict)
     return problem
