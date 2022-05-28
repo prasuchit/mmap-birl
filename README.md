@@ -1,4 +1,4 @@
-# mmap-irl
+# mmap-birl
 
 This project builds on the foundation established by J. Choi and K. Kim in MAP inference for Bayesian inverse reinforcement learning, NIPS 2010.
 
