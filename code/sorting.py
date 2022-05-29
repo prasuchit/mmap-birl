@@ -108,12 +108,16 @@ def init(nOnionLoc, nEEFLoc, nPredict, discount, useSparse, noise=0.05):
         F[s, :] = np.transpose(f)
 
     # Check transition probability
-    for a in range(nA):
-        for s in range(nS):
-            err = abs(sum(T[:, s, a]) - 1)
-            if err > 1e-6 or np.any(T) > 1 or np.any(T) < 0:
-                print(f"T(:,{s},{a}) = {T[:, s, a]}")
-                print('ERROR: \n', s, a, np.sum(T[:, s, a]))
+    # for a in range(nA):
+    #     for s in range(nS):
+    #         err = abs(sum(T[:, s, a]) - 1)
+    #         if err > 1e-6 or np.any(T) > 1 or np.any(T) < 0:
+    #             print(f"T(:,{s},{a}) = {T[:, s, a]}")
+    #             print('ERROR: \n', s, a, np.sum(T[:, s, a]))
+    
+    assert np.allclose(np.sum(T, axis=0), 1, rtol=1e-5), (
+        "un-normalised matrix %s" % T
+    )
 
     # np.savetxt(os.getcwd()+"\csv_files\sorting_T.csv",np.reshape(T,(nS,nS*nA)))
     start = start / np.sum(start)  # Pick inspect

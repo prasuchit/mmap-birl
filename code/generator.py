@@ -75,7 +75,8 @@ def generateDemonstration(mdp, problem):
 
     expertData.trajSet = trajs
     # yu.YAMLGenerator(mdp, expertData).writeVals()
-    yu.YAMLGenerator().readVals()
+    # yu.YAMLGenerator().readVals()
+    expertData.trajSet = np.loadtxt('csv_files/Ehsan_trajs/gated_traj_2.csv', delimiter=',', dtype=int)[np.newaxis,:]
     return expertData
 
 def generateTrajectory(mdp, problem):

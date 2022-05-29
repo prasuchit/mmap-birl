@@ -77,7 +77,7 @@ def main():
             if opts.optimMethod == 'gradAsc':
                 wL = utils2.gradientDescent(
                     mdp, trajs, problem, opts, currWeight, currGrad,  cache)
-            elif optimMethod == 'nesterovGrad':
+            elif opts.optimMethod == 'nesterovGrad':
                 wL, mdp = utils2.nesterovAccelGrad(
                     mdp, trajs, problem, opts, currWeight, currGrad, cache=cache)
 
@@ -92,7 +92,7 @@ def main():
                 print(
                     f"Rerunning for better results!\nValue Diff: {valueDiff.squeeze()} | Policy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
                 opts.restart += 1
-                if(opts.restart > 15):
+                if(opts.restart > 1):
                     print(f"Restarted {opts.restart} times already! Exiting!")
                     exit(0)
             else:

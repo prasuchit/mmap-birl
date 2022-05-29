@@ -12,7 +12,7 @@ seed: 'None'
 llhName: 'BIRL'
 priorName: 'Gaussian'
 # priorName: 'Uniform'
-prior_mean: 0.0     # 1.0 for sorting and -1.0 for gridworld
+prior_mean: 1.0     # 1.0 for sorting and -1.0 for gridworld
 prior_var: 0.5
 boltz_beta: 0.3
 alpha: 1    # Learning rate
@@ -22,7 +22,7 @@ probName: 'sorting'
 optimMethod: 'gradAsc'
 # optimMethod: 'nesterovGrad'
 nTrajs: 1
-nSteps: 15
+nSteps: 44
 problemSeed: None
 nOnionLoc: 4
 nEEFLoc: 4
