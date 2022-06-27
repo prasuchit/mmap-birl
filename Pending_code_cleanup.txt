@@ -1,7 +1,0 @@
-Clean up the way observations are obtained, obsv model is saved, sampled trajectories are generated(number of them is chosen)
-Add sanet_traj vs synthetic_traj as an argument in the beginning instead of inside generate trajectory within generator.
-Make the MDP files independent of the rest of it and allow a YAML load of MDP and trajectories.
-Clean up parallel_processing and sparse arguments all over.
-Get a readme setup with the additional packages to install like tqdm and pymdptoolbox linked to it.
-Try adding very small non-zero transitions for all other states than the probable ones to avoid divide by zero type errors
-==================================================================================================================

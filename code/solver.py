@@ -64,8 +64,10 @@ def evalToolbox(piL, mdp):
 
 def policyIteration(mdp):
 
-    """ This is the naive way to do policy iteration. Since we have a toolbox available,
-    this function is currently only used for sparse mdp implementation"""
+    """ 
+    @brief This is the naive way to do policy iteration. Since we have a toolbox available,
+    this function is currently only used for sparse mdp implementation
+    """
 
     MAX_ITERS = 10000
     EPS = 1e-12
@@ -102,8 +104,10 @@ def policyIteration(mdp):
 
 def evaluate(piL, mdp):
 
-    """ This function is being called from policy iteration function.
-    Hence it's currently only used for sparse mdp implementation """
+    """ 
+    @brief This function is being called from policy iteration function.
+    Hence it's currently only used for sparse mdp implementation 
+    """
 
     w = mdp.weight
     nS = mdp.nStates

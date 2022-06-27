@@ -3,6 +3,12 @@ import numpy as np
 import os
 import utils3
 
+'''
+NOTE: This module is still under construction. Essentially, this loads in 
+a domain and trajectories yaml file and populates the MDP details and trajectories
+to work with MMAP-BIRL algorithm. Raise an issue or email me at ps32611@uga.edu if 
+you want me to implement this soon.
+'''
 class YAMLGenerator():
     def __init__(self, mdp = None, expertData = None) -> None:
         self.name = mdp.name

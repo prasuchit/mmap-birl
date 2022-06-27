@@ -16,6 +16,9 @@ np.seterr(divide='ignore', invalid='ignore')
 
 
 def generateMDP(problem):
+    '''
+    @brief Generate a fully defined MDP for a given problem.
+    '''
     if problem.name == 'gridworld':
         mdp = gridworld.init(problem.gridSize, problem.blockSize, problem.noise, problem.discount, problem.useSparse)
 
@@ -74,13 +77,17 @@ def generateDemonstration(mdp, problem):
                     trajs[i, j, 1] = occlusions[j]     # 0 - state 1 - action
 
     expertData.trajSet = trajs
+    """ TBD: Move this to a seperate function that can be called from runner
+    if the domain is passed as a YAML file."""
     # yu.YAMLGenerator(mdp, expertData).writeVals()
     # yu.YAMLGenerator().readVals()
-    expertData.trajSet = np.loadtxt('csv_files/Ehsan_trajs/gated_traj_2.csv', delimiter=',', dtype=int)[np.newaxis,:]
+    # expertData.trajSet = np.loadtxt('csv_files/Ehsan_trajs/gated_traj_2.csv', delimiter=',', dtype=int)[np.newaxis,:]
     return expertData
 
 def generateTrajectory(mdp, problem):
-
+    '''
+    @brief  Extension of the generateDemonstration function.
+    '''
     print('Generate Demonstrations')
     nF = mdp.nFeatures
 
@@ -101,7 +108,6 @@ def generateTrajectory(mdp, problem):
             # policy, value, _, _ = solver.policyIteration(mdp)
             policy, value, _, _ = solver.piMDPToolbox(mdp)
 
-        # np.savetxt(os.getcwd()+"\csv_files\expert_policy.csv", policy, delimiter=",")
         toc = time.time()
         elapsedTime = toc - tic
         optValue = np.dot(np.transpose(mdp.start), value)
@@ -199,7 +205,9 @@ def generateTrajectory(mdp, problem):
     return trajs, policy
 
 def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None):
-
+    '''
+    @brief  Extension of generateTrajectories function.
+    '''
     trajs = np.zeros((nTrajs, nSteps, 2)).astype(int)
     vList = np.zeros(nTrajs)
     if not mdp.useSparse:
@@ -235,7 +243,15 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None):
     return trajs, Vmean, Vvar
 
 def sampleTauTrajectories(mdp, traj, nTrajs, nSteps, seed = None):
-
+    '''
+    @brief Since there could be a gigantic number of trajectories possible
+    from a given set of observations depending on the observation model and
+    the transition function of the MDP, we sample a large number of trajectories
+    here as an approximation. 
+    NOTE: Currently, this has only been implemented for the Forestworld and Sorting
+    domain and not in the best way. Feel free to improve upon the implementation or
+    extend it to your own domain.
+    '''
     tautrajs = np.zeros((nTrajs, nSteps, 2)).astype(int)
     np.random.seed(seed)
     nS = mdp.nStates

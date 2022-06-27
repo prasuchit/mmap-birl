@@ -47,31 +47,15 @@ def init(nOnionLoc, nEEFLoc, nPredict, discount, useSparse, noise=0.05):
                 if a not in actidx:     # If action is invalid
                     if not (utils3.isValidNxtState(a, nxtS[0], nxtS[1], nxtS[2])):
                         T[ns, s, a] = 1
-                        # T[ns, s, a] = 0.9
-                        # for i in range(nS):
-                        #     if i != ns:
-                        #         T[i, s, a] = 0.1/(nS-1) # Just to prevent any state from having det transitions
                     else:
                         T[43, s, a] = 1   # If next state is valid send it to the sink
-                        # T[43, s, a] = 0.9   # If next state is valid send it to the sink
-                        # for i in range(nS):
-                        #     if i != 91:
-                        #         T[i, s, a] = 0.1/(nS-1) # Just to prevent any state from having det transitions
                 else:
                     if not (utils3.isValidState(onionLoc, eefLoc, pred)):  # Invalid state
                         if not (utils3.isValidNxtState(a, nxtS[0], nxtS[1], nxtS[2])):
                             T[ns, s, a] = 1
-                            # T[ns, s, a] = 0.9
-                            # for i in range(nS):
-                            #     if i != ns:
-                            #         T[i, s, a] = 0.1/(nS-1) # Just to prevent any state from having det transitions
                         else:
                             # Valid actions in invalid states leading to valid next states become a sink
                             T[43, s, a] = 1   # If next state is valid send it to the sink
-                            # T[43, s, a] = 0.9   # If next state is valid
-                            # for i in range(nS):
-                            #     if i != 91:
-                            #         T[i, s, a] = 0.1/(nS-1) # Just to prevent any state from having det transitions
                     else:
                         # Valid action in a valid state leading to a valid next state also has a
                         # small failure rate given by noise.
@@ -81,26 +65,21 @@ def init(nOnionLoc, nEEFLoc, nPredict, discount, useSparse, noise=0.05):
                         T[ns, s, a] += (1 - noise)/len(nextStates)
                 
                 # Calculate features
+                # Good onion back on conveyor
                 if pred == 1 and nxtS[0] == 0:
                     f[0] = 1
-                    
+                # Bad onion back on conveyor
                 if pred == 0 and nxtS[0] == 0:
                     f[1] = 1
-                    
+                # Good onion in bin
                 if pred == 1 and nxtS[0] == 2:
                     f[2] = 1
-                    
+                # Bad onion in bin 
                 if pred == 0 and nxtS[0] == 2:
                     f[3] = 1
-                    
-                # # Stay still
-                # if (s == ns):
-                #     f[4] = 1
-
                 # Claim new onions
                 if pred == 2 and ((onionLoc == 2 or onionLoc == 0) and nxtS[1] == 3):
                     f[4] = 1
-
                 # Pick if unknown
                 if onionLoc == 0 and pred == 2 and nxtS[2] == 2 and nxtS[0] == 3:
                     f[5] = 1
@@ -119,7 +98,6 @@ def init(nOnionLoc, nEEFLoc, nPredict, discount, useSparse, noise=0.05):
         "un-normalised matrix %s" % T
     )
 
-    # np.savetxt(os.getcwd()+"\csv_files\sorting_T.csv",np.reshape(T,(nS,nS*nA)))
     start = start / np.sum(start)  # Pick inspect
     mdp = models.mdp()
     mdp.name = 'sorting'

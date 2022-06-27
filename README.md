@@ -6,7 +6,7 @@ The algorithm developed in this repo considers occluded and noisy expert demonst
 
 The codebase has been built and developed in python based on an existing repo by Jaedeug Choi (jdchoi@ai.kaist.ac.kr) in Matlab. 
 
-The paper is available at this [link](https://arxiv.org/pdf/2109.07788). 
+This paper has been published in UAI 2022 conference. The PDF is currently available at this [link](https://arxiv.org/pdf/2109.07788). 
 
 Cite this work as:
 
@@ -17,17 +17,40 @@ Cite this work as:
   year={2021}
 }
 
+***Requirements: 
 
-Check out the following links for file specific readme:
+I'd recommend creating a conda env and installing the following packages within:
+    - numpy
+    - scipy
+    - logging
+    - pymdptoolbox
+    - tqdm
+    - pyyaml
+    - multiprocessing
 
-1. [runner.py](https://github.com/prasuchit/mmap-irl/blob/master/Readme/runner-Readme.md)
-2. [birl.py](https://github.com/prasuchit/mmap-irl/blob/master/Readme/birl-Readme.md)
-3. [generator.py](https://github.com/prasuchit/mmap-irl/blob/master/Readme/generator-Readme.md)
-4. [gridworld.py](https://github.com/prasuchit/mmap-irl/blob/master/Readme/gridworld-Readme.md)
-5. [highway3.py](https://github.com/prasuchit/mmap-irl/blob/master/Readme/highway3-Readme.md)
-6. [llh.py](https://github.com/prasuchit/mmap-irl/blob/master/Readme/llh-Readme.md)
-7. [models.py](https://github.com/prasuchit/mmap-irl/blob/master/Readme/models-Readme.md)
-8. [options.py](https://github.com/prasuchit/mmap-irl/blob/master/Readme/options-Readme.md)
-9. [parameters.py](https://github.com/prasuchit/mmap-irl/blob/master/Readme/parameters-Readme.md)
-10. [solver.py](https://github.com/prasuchit/mmap-irl/blob/master/Readme/solver-Readme.md)
-11. [utils.py](https://github.com/prasuchit/mmap-irl/blob/master/Readme/utils-Readme.md)
+I will soon push a requirements.txt file that you can use to create the environment easily.
+
+***Usage:
+
+Assuming you've read the paper and have a good understanding of how the algorithm works, first open /yaml_files/init_params.yaml and make sure the name of the problem you want to test and all other parameters are to your requirements. If you're unsure about the hyperparameters or want to just test an existing domain, you could just run the code as it is and it would work fine.
+
+Activate your conda env and cd into mmap-birl/code folder and run the following command:
+
+    `python3 runner.py`
+
+You should see the results printed on the terminal that tells you about the initial weights sampled, learned reward weights and the metrics - Inverse Learning Error(ILE)/Value Difference, Learned Behavior Accuracy(LBA)/Policy Difference and Reward Difference.
+
+***Pending Updates:
+
+Ideally, I plan to make this such that you can pass a yaml file for the MDP and a yaml file with trajectories and execute MMAP-BIRL. That functionality is under works.
+
+The sparse MDP implementation mostly works, but I haven't done extensive testing with it yet.
+
+The scipy minimize based optimization is deprecated for now, although I plan to bring it back soon.
+
+Parallel processing is available for the marginalization part, although for small and/or almost deterministic transitions, it won't matter much.
+
+The observation function and s-a trajectories sampled from it needs to be more robust, but for the current domains, it works fine.
+
+The domains could be made much more stochastic in terms of transition probabilities. That would be an added challenge for MMAP-BIRL to converge.
+

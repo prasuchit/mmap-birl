@@ -1,7 +1,7 @@
 solverMethod: 'manual'
 # solverMethod: 'scipy'
-algoName: 'MAP_BIRL'
-# algoName: 'MMAP_BIRL'
+# algoName: 'MAP_BIRL'
+algoName: 'MMAP_BIRL'
 optimizer: 'L-BFGS-B'
 # optimizer: 'Newton-CG'
 restart: 1

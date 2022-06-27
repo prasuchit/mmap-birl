@@ -6,6 +6,11 @@ import time
 from tqdm import tqdm
 from scipy.optimize._minimize import minimize
 import solver
+'''
+NOTE: THIS FILE HAS NOT BEEN UPDATED IN A LONG TIME.
+SOME FUNCTIONS OF MMAP-BIRL MAY NOT PLAY WELL WITH THIS FILE.
+TRY NOT TO USE THIS!
+'''
 
 class trajNode:
     def __init__(self, s, a, parent):

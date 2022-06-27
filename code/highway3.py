@@ -14,9 +14,7 @@ import time
 def init(nGrids, nSpeeds, nLanes, discount, useSparse):
 
     appearanceProb = np.array(np.linspace(0.4,1,num=nLanes, endpoint=False))  # prob. of other car appearing on each lane
-    
     # prob of successfully moving in intended way
-    
                                   # spd0 spd1
     succProb = np.reshape(np.array([0.8, 0.4,           # Action (1,2), (1,2) 
                                     1.0, 0.8]), (2,2))  # Action (3,4), (3,4)   
@@ -131,21 +129,6 @@ def init(nGrids, nSpeeds, nLanes, discount, useSparse):
     start     = np.zeros((nS, 1))
     s0        = utils.info2sid(0, 1,[0]*nLanes, nSpeeds, nLanes, nGrids)
     start[s0] = 1
-
-    # # weight for reward
-    # w = np.zeros((nF, 1))
-    # # fast driver avoids collisions and prefers high speed
-    # w[1] = -1      # collision
-    # w[-1] = 0.1   # high speed
-
-    # # safe driver avoids collisions and prefers right-most lane
-    # w(1) = -1
-    # w(1 + nLanes) = 0.1
-
-    # # demolition prefers collisions and high-speed
-    # w(1) = 1
-    # w(end) = 0.1
-
     # generate MDP
     mdp = models.mdp()
     mdp.name       = 'highway'
@@ -179,6 +162,4 @@ def init(nGrids, nSpeeds, nLanes, discount, useSparse):
             mdp.transitionS[a] = sparse.csr_matrix(mdp.transition[:, :, a])
             mdp.rewardS[a] = sparse.csr_matrix(mdp.reward[:, a])
 
-    # print("Leaving Highway init")
-    
     return mdp

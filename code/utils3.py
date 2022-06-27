@@ -5,7 +5,10 @@ from gridworld import neighbouring
 import generator
 
 def sid2vals(s, nOnionLoc = 4, nEEFLoc = 4, nPredict = 3, start = None):
-    ''' Given state id, this func converts it to the 3 variable values '''
+    ''' 
+    FOR SORTING PROBLEM
+    Given state id, this func converts it to the 3 variable values 
+    '''
     sid = s
     onionloc = int(mod(sid, nOnionLoc))
     sid = (sid - onionloc)/nOnionLoc
@@ -20,7 +23,10 @@ def sid2vals(s, nOnionLoc = 4, nEEFLoc = 4, nPredict = 3, start = None):
 
 
 def vals2sid(ol, eefl, pred, nOnionLoc = 4, nEEFLoc = 4, nPredict = 3):
-    ''' Given the 3 variable values making up a state, this converts it into state id '''
+    ''' 
+    FOR SORTING PROBLEM
+    Given the 3 variable values making up a state, this converts it into state id 
+    '''
     return (ol + nOnionLoc * (eefl + nEEFLoc * pred))
 
 
@@ -32,7 +38,6 @@ def getValidActions(onionLoc, eefLoc, pred):
     Actions: {0: 'InspectAfterPicking', 1: 'PlaceOnConveyor', 2: 'PlaceInBin', 3: 'Pick', 
         4: 'ClaimNewOnion'}
     '''
-
     if onionLoc == 0:
         if eefLoc == onionLoc:  
             actidx = [4]
@@ -67,13 +72,8 @@ def findNxtStates(onionLoc, eefLoc, pred, a):
     '''
     if a == 0:
         ''' InspectAfterPicking '''
-        # Assumptions: These need to be replaced with real world values later.
-        # prediction that onion is bad. 95% accuracy of detection
-        # 50% of claimable onions on conveyor are bad
         if pred == 2:  # it can predict claimed-gripped onion only if prediction is unknown
-            # pp = 0.5*0.95
-            # pred = np.random.choice([1, 0], 1, p=[1-pp, pp])[0]
-            return [[1, 1, 0], [1, 1, 1]]
+            return [[1, 1, 0], [1, 1, 1]]   # Equally probable states. Could make it more stochastic.
         else:
             return [[1, 1, pred]]
     elif a == 1:
@@ -95,7 +95,6 @@ def isValidState(onionLoc, eefLoc, pred):
         return False
     return True
 
-
 def isValidNxtState(a, onionLoc, eefLoc, pred):
     if (onionLoc == 1 and eefLoc != 1) or (onionLoc == 2 and eefLoc != 2) or (onionLoc == 3 and eefLoc != 3):
         return False
@@ -111,8 +110,12 @@ def getKeyFromValue(my_dict, val):
     return "key doesn't exist"
 
 def applyObsvProb(problem, policy, mdp):
-    ''' @brief  Here we synthetically generate noisy observations
-    using simulated true trajectories.'''
+    ''' 
+    @brief  Here we synthetically generate noisy observations
+    using simulated true trajectories.
+    NOTE: This function was written a LONG time ago and I'm pretty sure
+    I can do a much better job if I rewrite it now. Adding to my todo list.
+    '''
     if problem.name == 'sorting':
         trajs, _, _ = generator.sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
         obsvs = np.copy(trajs)
@@ -150,6 +153,10 @@ def applyObsvProb(problem, policy, mdp):
     return obsvs
 
 def getObsvInfo(obsvs, mdp):
+    '''
+    @brief Generates the observation model. 
+    Could be made more elaborate in the future.
+    '''
     nS = mdp.nStates
     nA = mdp.nActions
     nTraj = np.shape(obsvs)[0]

@@ -12,6 +12,7 @@ import solver
 import time
 import os
 import yaml
+import logging
 np.seterr(divide='ignore', invalid='ignore')
 '''
 @author Prasanth Suresh
@@ -19,13 +20,17 @@ np.seterr(divide='ignore', invalid='ignore')
 @brief  This algorithm extends MAP BIRL(2011) by J.Choi et al. to work
         with input data that contains noise and missing pieces.
         The results are tested on a formative toy problem and a summative
-        robotic sorting domain. This paper is currently available at https://arxiv.org/pdf/2109.07788.pdf. 
+        robotic sorting domain. This paper has been published in UAI 2022 conference.
+        PDF currently available at https://arxiv.org/pdf/2109.07788.pdf. 
 '''
+logger = logging.getLogger(__name__)
+path = os.path.dirname (os.path.realpath (__file__))
+PACKAGE_PATH = os.path.abspath(os.path.join(path, os.pardir))
 
 def main():
 
     # Read YAML file
-    init_yaml_file = open(os.getcwd()+"\yaml_files\init_params.yaml")       
+    init_yaml_file = open(PACKAGE_PATH+"\yaml_files\init_params.yaml")       
 
     data_loaded = yaml.safe_load(init_yaml_file)
 
@@ -41,10 +46,13 @@ def main():
 
     trajs = expertData.trajSet
 
-    expertPolicy = expertData.policy
+    # expertPolicy = expertData.policy
 
     if(opts.solverMethod == 'scipy'):
-
+        logger.warning(
+            f"NOTE: scipy solver hasn't been updated and tested with all the latest changes of MMAP.\
+                Results may not be accurate. I strongly suggest using the manual method!"
+                )
         if opts.alg == 'MMAP_BIRL':
             print("Calling MMAP BIRL")
             birl.MMAP(expertData, mdp, opts, problem)
@@ -65,7 +73,7 @@ def main():
 
             t0 = time.time()
             print("Compute initial posterior and gradient ...")
-            initPost, initGrad = llh.calcNegMarginalLogPost(
+            _, initGrad = llh.calcNegMarginalLogPost(
                 w0, trajs, mdp, opts, problem)
             print("Compute initial opimality region ...")
             pi, H = utils2.computeOptmRegn(mdp, w0)
@@ -86,9 +94,7 @@ def main():
             rewardDiff, valueDiff, policyDiff, piL, piE = utils2.computeResults(
                 expertData, mdp, wL)
 
-            # if(policyDiff >= 0.5 or valueDiff > 0.5):
-            # if valueDiff >= 0.2:    # This is for 4x4 gridworld
-            if valueDiff >= 1:    # This is for 4x4 gridworld
+            if(policyDiff >= 0.5 or valueDiff > 0.5):
                 print(
                     f"Rerunning for better results!\nValue Diff: {valueDiff.squeeze()} | Policy misprediction: {policyDiff} | Reward Difference: {rewardDiff}")
                 opts.restart += 1
@@ -96,18 +102,11 @@ def main():
                     print(f"Restarted {opts.restart} times already! Exiting!")
                     exit(0)
             else:
-                # print("Expert's Policy: \n",utils2.piInterpretation(expertPolicy.squeeze(), problem.name))
-                # print("Learned Policy: \n",utils2.piInterpretation(learnedPolicy.squeeze(), problem.name))
-                # print("Sampled weights: \n", w0)
                 opts.restart = 0
                 print("True weights: \n", expertData.weight,
                       "\nSampled weights: \n", w0, "\nLearned weights: \n", wL)
                 t1 = time.time()
                 runtime = t1 - t0
-                # print("Same number of actions between expert and learned pi: ",
-                #       (piL.squeeze() == piE.squeeze()).sum(), "/", mdp.nStates)
-                # np.savetxt(os.getcwd()+"\csv_files\expert_policy.csv", piE, delimiter=",")
-                # np.savetxt(os.getcwd()+"\csv_files\learned_policy.csv", piL, delimiter=",")
                 print("Time taken: ", runtime, " seconds")
                 print(
                     f"Policy Diff: {policyDiff} | Reward Diff: {rewardDiff}| Value Diff: {valueDiff.squeeze()}")

@@ -56,7 +56,11 @@ def nesterovAccelGrad(mdp, trajs, problem, opts, currWeight = 0, currGrad = 0, c
     return currWeight, mdp
 
 def processOccl(trajs, nS, nA, nTrajs, nSteps, discount, transition):
-
+    '''
+    @brief Runs bidirectional search and retuns possible candidates based on transition prob.
+    NOTE: This function was written a LONG time ago and I'm pretty sure
+    I can do a much better job if I rewrite it now. Adding to my todo list.
+    '''
     occlusions = []    
     cnt = np.zeros((nS, nA))
     occupancy = np.zeros((nS, nA))
@@ -186,7 +190,7 @@ def piInterpretation(policy, name):
             elif(policy[i] == 3):
                 actions[i] = 'South'
     else:
-        print("Problem is not gridworld. This function doesn't work for other problems yet.")
+        raise NotImplementedError("Problem is not gridworld. This function doesn't work for other problems yet.")
     return actions
 
 def computeResults(expertData, mdp, wL):
@@ -224,9 +228,6 @@ def computeResults(expertData, mdp, wL):
     and learner wrt true weights to find the diff in value they acrue '''
     valueDiff  = abs(vE - vL)   # ILE - Inverse Learning Error
     policyDiff = np.sum(d)/mdp.nStates  # LBA - Learned Behavior Accuracy
-    
-    # print((piL.squeeze() == piE.squeeze()).sum(), "/", mdp.nStates)
-    # np.savetxt(os.getcwd()+"\csv_files\learned_policy_partialobsv.csv", piL, delimiter=",")
 
     return rewardDiff, valueDiff, policyDiff, piL, piE
 
@@ -236,7 +237,6 @@ def normalizedW(weights, normMethod):
     elif normMethod == '0-1':
         wL = (weights-min(weights))/(max(weights)-min(weights)) # Normalizing b/w 0-1
     else:   wL = weights # Unnormalized raw weights
-
     return wL
 
 def logsumexp_row_nonzeros(X):
