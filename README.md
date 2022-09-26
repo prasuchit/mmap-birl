@@ -6,15 +6,17 @@ The algorithm developed in this repo considers occluded and noisy expert demonst
 
 The codebase has been built and developed in python based on an existing repo by Jaedeug Choi (jdchoi@ai.kaist.ac.kr) in Matlab. 
 
-This paper has been published in UAI 2022 conference. The PDF is currently available at this [link](https://arxiv.org/pdf/2109.07788). 
+This paper has been published in UAI 2022 conference. The PDF is currently available at this [link](https://proceedings.mlr.press/v180/suresh22a/suresh22a.pdf). 
 
 Cite this work as:
 
-@article{suresh2021marginal,
-  title={Marginal MAP Estimation for Inverse RL under Occlusion with Observer Noise},
+@inproceedings{suresh2022marginal,
+  title={Marginal MAP estimation for inverse RL under occlusion with observer noise},
   author={Suresh, Prasanth Sengadu and Doshi, Prashant},
-  journal={arXiv preprint arXiv:2109.07788},
-  year={2021}
+  booktitle={Uncertainty in Artificial Intelligence},
+  pages={1907--1916},
+  year={2022},
+  organization={PMLR}
 }
 
 ## Requirements: 
