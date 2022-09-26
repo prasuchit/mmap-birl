@@ -35,7 +35,7 @@ I will soon push a requirements.txt file that you can use to create the environm
 
 ## Usage:
 
-Assuming you've read the paper and have a good understanding of how the algorithm works, first open /yaml_files/init_params.yaml and make sure the name of the problem you want to test and all other parameters are to your requirements. If you're unsure about the hyperparameters or want to just test an existing domain, you could just run the code as it is and it would work fine.
+Assuming you've read the paper and have a good understanding of how the algorithm works, first open ./yaml_files/init_params.yaml and make sure the name of the problem you want to test and all other parameters are to your requirements. If you're unsure about the hyperparameters or want to just test an existing domain, you could just run the code as it is and it would work fine.
 
 Activate your conda env and cd into mmap-birl/code folder and run the following command:
 
