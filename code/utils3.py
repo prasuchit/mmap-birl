@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from operator import mod
 from scipy import stats
@@ -133,6 +134,9 @@ def applyObsvProb(problem, policy, mdp):
                         pred = np.random.choice([pred, int(not pred)], 1, p=[1-pp, pp])[0]
                     obsvs[m,h,0] = vals2sid(onionLoc, eefLoc, pred, problem.nOnionLoc, problem.nEEFLoc, problem.nPredict)
                 else:
+                    # NOTE: Old sanet trajs follow an older version of MDP with listidstatus var needed for roll behavior.
+                    # Loading that into this won't work because old mdp statesize and action size are different.
+                    # TBD: add a translation or use assert statement to break if invalid trajs.
                     trajsSANet = np.loadtxt(os.getcwd()+"\csv_files\trajsFromSANet.csv", dtype = int)
                     obsvs[m,h,0] = trajsSANet[i]
                     obsvs[m,h,1] = policy[trajsSANet[i]]

@@ -21,7 +21,15 @@ np.seterr(divide='ignore', invalid='ignore')
         with input data that contains noise and missing pieces.
         The results are tested on a formative toy problem and a summative
         robotic sorting domain. This paper has been published in UAI 2022 conference.
-        PDF currently available at https://arxiv.org/pdf/2109.07788.pdf. 
+        Cite as:
+        @inproceedings{suresh2022marginal,
+            title={Marginal MAP estimation for inverse RL under occlusion with observer noise},
+            author={Suresh, Prasanth Sengadu and Doshi, Prashant},
+            booktitle={Uncertainty in Artificial Intelligence},
+            pages={1907--1916},
+            year={2022},
+            organization={PMLR}
+            }
 '''
 logger = logging.getLogger(__name__)
 path = os.path.dirname (os.path.realpath (__file__))

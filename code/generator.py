@@ -124,7 +124,7 @@ def generateTrajectory(mdp, problem):
                 trajs, trajVmean, trajVvar = sampleTrajectories(problem.nTrajs, problem.nSteps, policy, mdp, problem.seed)
             print(' - sample %d trajs: V mean: %.4f, V variance: (%.4f)' % (problem.nTrajs, trajVmean, trajVvar))
         else:
-            obsvs = utils3.applyObsvProb(problem, policy, mdp, sanet_traj = True)
+            obsvs = utils3.applyObsvProb(problem, policy, mdp)
             return obsvs, policy
 
     elif problem.name == 'gridworld':
@@ -224,8 +224,9 @@ def sampleTrajectories(nTrajs, nSteps, piL, mdp, seed = None):
             # sample = sampleMultinomial(np.reshape(mdp.start, (mdp.nStates)), seed)
             sample = np.random.multinomial(n=1, pvals=np.reshape(mdp.start, (mdp.nStates)))
             
-        s = np.squeeze(np.where(sample == 1))
+        # s = np.squeeze(np.where(sample == 1))
         # s = sample
+        s = 140
         v = 0
         for h in range(nSteps):
             a = np.squeeze(piL[s])
